@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "id": "oneplus-6",
+  "manufacturer": "oneplus",
+  "marketing_name": "OnePlus 6",
+  "model_number": "unverified (regional variants exist; confirm exact model before any support claim)",
+  "hardware_variant": "unverified",
+  "chipset": "sdm845",
+  "usb_ids": [],
+  "storage": "unknown",
+  "capability_level": "unknown",
+  "authentication": { "required": "unknown", "mechanism": null },
+  "programmers": [],
+  "firmware_compatibility_rules": [],
+  "recovery_writable_protected": [],
+  "partition_layout_notes": "Not yet inspected.",
+  "verified_operations": [],
+  "known_limitations": ["RESEARCH TARGET ONLY: no hardware evidence recorded; not a compatibility claim."],
+  "evidence": [],
+  "last_verified": null
+}
