@@ -1,0 +1,13 @@
+[package]
+name = "edl-sim"
+description = "Deterministic simulated Qualcomm EDL target for tests (NOT evidence of hardware compatibility)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+edl-core = { path = "../core" }
+
+[dev-dependencies]
+sha2.workspace = true
