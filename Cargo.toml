@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["core", "simulator", "tools/edl-cli"]
+members = ["core", "simulator", "tools/edl-cli", "android/native/edl-jni"]
 
 [workspace.package]
 version = "0.1.0"
