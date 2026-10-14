@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/logo-512.png" alt="EDL Commander logo" width="200">
+</p>
+
 # EDL Commander
 
 Open-source, **safety-first** framework for Qualcomm **Emergency Download (EDL)** device recovery, built around a shared Rust engine with planned Ubuntu and Android-to-Android (USB OTG) frontends.
