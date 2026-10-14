@@ -1,13 +1,13 @@
 # EDL Commander
 
-Open-source, **safety-first** framework for Qualcomm **Emergency Download (EDL)** device recovery, built around a shared Rust engine with planned Ubuntu and Android-to-Android (USB OTG) frontends.
+Open-source, **safety-first** framework for Qualcomm **Emergency Download (EDL)** device recovery, built around a shared Rust engine with planned Ubuntu and Android frontends. On Android it is a bound companion APK controlled by Droidcommand-AI over AIDL (same signing key).
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Rust](https://img.shields.io/badge/Rust-1.80%2B-orange?logo=rust)](https://www.rust-lang.org/)
-![Status: Phase 1](https://img.shields.io/badge/status-Phase%201%20foundation-orange)
+![Status: Phase 1 + Android scaffold](https://img.shields.io/badge/status-Phase%201%20%2B%20Android%20scaffold-orange)
 
-> **Status: Phase 1 (foundation) only.** No real hardware has been tested. Nothing here can flash a device.
-> There is no USB backend, no Firehose, no GUI, and no Android app yet. See [ROADMAP.md](ROADMAP.md).
+> **Status: Phase 1 (foundation) plus an Android companion scaffold.** No real hardware has been tested. Nothing here can flash a device.
+> There is no Firehose, no Ubuntu app, no JNI/native link, and no USB open/transfer path. The Android app only lists USB devices and answers dry-run/status commands. See [ROADMAP.md](ROADMAP.md) and [docs/ANDROID.md](docs/ANDROID.md).
 
 ## What exists today
 
@@ -20,7 +20,11 @@ Open-source, **safety-first** framework for Qualcomm **Emergency Download (EDL)*
 | `simulator/` deterministic fake EDL target with fault injection | Implemented |
 | `tools/edl-cli` (`validate-db`, `sim`) | Implemented; **no USB I/O** |
 | Firehose, GPT parsing, firmware import, backup, flashing | Not started |
-| Ubuntu app, Android app | Not started |
+| `android/` companion APK (Kotlin, Compose) | Scaffold started: builds a debug APK; USB Host 9008 **list/detect only** (VID/PID); no device is opened |
+| AIDL bound service for Droidcommand-AI (`IEdlCompanion`, command envelopes) | Stub live: capabilities, status, `usb.list`, dry-run `sahara.identify`; write-class commands are denied. Same-signing enforced by signature permission; hub package pin is a TODO |
+| JNI link from the Android app to `edl-core` (Sahara) | Planned (hook and plan only; not linked) |
+| Real USB open/Sahara on Android, OnePlus 7T HD1905 path | Not started (HD1905 has a research-only profile at `unknown`) |
+| Ubuntu app | Not started |
 
 ## Principles
 
@@ -30,14 +34,15 @@ Open-source, **safety-first** framework for Qualcomm **Emergency Download (EDL)*
 
 ## Screenshots
 
-| CLI `validate-db` | CLI `sim` fault injection | Future Ubuntu GUI | Future Android OTG |
+| CLI `validate-db` | CLI `sim` fault injection | Future Ubuntu GUI | Android companion |
 |---|---|---|---|
-| *TODO* | *TODO* | *Not started* | *Not started* |
+| *TODO* | *TODO* | *Not started* | *TODO* |
 
 ## Requirements
 
 - Rust **1.80+** (workspace `rust-version`)
 - Cargo (workspace members: `core`, `simulator`, `tools/edl-cli`)
+- Optional, for the Android companion: JDK 17+ and the Android SDK (platform 35); see [docs/ANDROID.md](docs/ANDROID.md)
 
 ## Build and test
 
@@ -50,6 +55,9 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 cargo run -p edl-cli -- validate-db database
 cargo run -p edl-cli -- sim [none|silent|malformed|disconnect]
+
+# Android companion (needs ANDROID_HOME)
+cd android && ./gradlew testDebugUnitTest assembleDebug
 ```
 
 ## Project structure
@@ -58,6 +66,7 @@ cargo run -p edl-cli -- sim [none|silent|malformed|disconnect]
 core/           edl-core — Sahara, device DB, security, diagnostics
 simulator/      edl-sim — fake EDL target + fault injection
 tools/edl-cli/  CLI (validate-db, sim)
+android/        Android companion app (Kotlin/Compose, AIDL service, USB detect stubs)
 database/       chipsets, devices, manufacturers, programmers
 docs/           ANDROID, FLASHING, PROTOCOLS, TESTING, UBUNTU
 ARCHITECTURE.md · COMPATIBILITY.md · SECURITY.md · ROADMAP.md · CONTRIBUTING.md
