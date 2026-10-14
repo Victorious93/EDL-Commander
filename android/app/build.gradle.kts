@@ -27,6 +27,9 @@ abstract class CargoNdkTask @Inject constructor(private val execOps: ExecOperati
 
     @TaskAction
     fun build() {
+        check(File(ndkDir.get()).isDirectory) {
+            "Android NDK ${File(ndkDir.get()).name} not found at ${ndkDir.get()}; install it with: sdkmanager \"ndk;${File(ndkDir.get()).name}\""
+        }
         val out = outputDir.get().asFile
         out.deleteRecursively()
         out.mkdirs()
@@ -119,7 +122,7 @@ androidComponents {
                 abis.set(nativeAbis)
                 // Debug builds keep the simulated target (default feature); release builds omit it.
                 cargoArgs.set(if (variant.buildType == "release") listOf("--release", "-p", "edl-jni", "--no-default-features") else listOf("--release", "-p", "edl-jni"))
-                ndkDir.set(sdkComponents.ndkDirectory.map { it.asFile.absolutePath })
+                ndkDir.set(sdkComponents.sdkDirectory.map { it.dir("ndk/$edlNdkVersion").asFile.absolutePath })
                 workspaceDir.set(cargoWorkspace)
                 rustSources.from(rustSourceFiles)
                 outputDir.set(layout.buildDirectory.dir("generated/edlJni/${variant.name}"))
