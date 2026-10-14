@@ -4,10 +4,10 @@ Open-source, **safety-first** framework for Qualcomm **Emergency Download (EDL)*
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Rust](https://img.shields.io/badge/Rust-1.80%2B-orange?logo=rust)](https://www.rust-lang.org/)
-![Status: Phase 1 + Android scaffold](https://img.shields.io/badge/status-Phase%201%20%2B%20Android%20scaffold-orange)
+![Status: Phase 1 + Phase 3 in progress](https://img.shields.io/badge/status-Phase%201%20%2B%20Phase%203%20in%20progress-orange)
 
-> **Status: Phase 1 (foundation) plus an Android companion scaffold.** No real hardware has been tested. Nothing here can flash a device.
-> There is no Firehose, no Ubuntu app, no JNI/native link, and no USB open/transfer path. The Android app only lists USB devices and answers dry-run/status commands. See [ROADMAP.md](ROADMAP.md) and [docs/ANDROID.md](docs/ANDROID.md).
+> **Status: Phase 1 (foundation) complete; Phase 3 (Android companion) in progress.** **No real hardware has been tested**, and no device is supported or verified. Nothing here can flash a device.
+> There is no Firehose, no programmer upload and no Ubuntu app. The Android app (draft, unverified on devices) can list USB devices, ask the user for USB permission for a `05c6:9008` device, and run a **read-only** Sahara identify (serial, hardware ID, OEM PK hash) through a Rust JNI library. Only host/JVM and simulator tests have run. See [ROADMAP.md](ROADMAP.md) and [docs/ANDROID.md](docs/ANDROID.md).
 
 ## What exists today
 
@@ -18,12 +18,13 @@ Open-source, **safety-first** framework for Qualcomm **Emergency Download (EDL)*
 | `core/` device/chipset/manufacturer/programmer schema + validated DB loader | Implemented |
 | `core/` safety policy (read-only default, gated writes, protected partitions) + hash-chained audit log | Implemented |
 | `simulator/` deterministic fake EDL target with fault injection | Implemented |
-| `tools/edl-cli` (`validate-db`, `sim`) | Implemented; **no USB I/O** |
+| `core/` read-only Sahara command-mode identify (`run_identify`) + `IdentifyDevice` authorization | Implemented; simulator and synthetic fixtures only |
+| `tools/edl-cli` (`validate-db`, `sim`, `sim-identify`) | Implemented; **no USB I/O** |
 | Firehose, GPT parsing, firmware import, backup, flashing | Not started |
-| `android/` companion APK (Kotlin, Compose) | Scaffold started: builds a debug APK; USB Host 9008 **list/detect only** (VID/PID); no device is opened |
-| AIDL bound service for Droidcommand-AI (`IEdlCompanion`, command envelopes) | Stub live: capabilities, status, `usb.list`, dry-run `sahara.identify`; write-class commands are denied. Same-signing enforced by signature permission; hub package pin is a TODO |
-| JNI link from the Android app to `edl-core` (Sahara) | Planned (hook and plan only; not linked) |
-| Real USB open/Sahara on Android, OnePlus 7T HD1905 path | Not started (HD1905 has a research-only profile at `unknown`) |
+| `android/` companion APK (Kotlin, Compose) | In progress: builds a debug APK with the native library; user-initiated USB permission flow, open/claim of the 9008 bulk interface and read-only identify are written but **never run on a device or emulator** |
+| AIDL bound service for Droidcommand-AI (`IEdlCompanion`, command envelopes) | Commands: capabilities, status, `usb.list`, `usb.request_permission`, `sahara.identify` (dry-run default; live is read-only and audit-logged); write-class commands are denied. Same-signing enforced by signature permission; hub package pin is a TODO |
+| `android/native/edl-jni` JNI bridge (callback `Transport` over Kotlin-owned USB bulk transfers; built with cargo-ndk into the APK) | Implemented; adapter tested against `edl-sim` on the host, JNI glue exercised on a host JVM only |
+| Real-device Sahara on Android, OnePlus 7T HD1905 path | **No hardware evidence.** HD1905 has a research-only profile at capability `unknown` |
 | Ubuntu app | Not started |
 
 ## Principles
@@ -41,8 +42,8 @@ Open-source, **safety-first** framework for Qualcomm **Emergency Download (EDL)*
 ## Requirements
 
 - Rust **1.80+** (workspace `rust-version`)
-- Cargo (workspace members: `core`, `simulator`, `tools/edl-cli`)
-- Optional, for the Android companion: JDK 17+ and the Android SDK (platform 35); see [docs/ANDROID.md](docs/ANDROID.md)
+- Cargo (workspace members: `core`, `simulator`, `tools/edl-cli`, `android/native/edl-jni`)
+- Optional, for the Android companion: JDK 17+, the Android SDK (platform 35) and NDK, Rust Android targets and cargo-ndk; see [docs/ANDROID.md](docs/ANDROID.md)
 
 ## Build and test
 
@@ -55,8 +56,9 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 cargo run -p edl-cli -- validate-db database
 cargo run -p edl-cli -- sim [none|silent|malformed|disconnect]
+cargo run -p edl-cli -- sim-identify
 
-# Android companion (needs ANDROID_HOME)
+# Android companion (needs ANDROID_HOME, NDK 27.2.12479018, Rust Android targets, cargo-ndk)
 cd android && ./gradlew testDebugUnitTest assembleDebug
 ```
 
@@ -65,8 +67,9 @@ cd android && ./gradlew testDebugUnitTest assembleDebug
 ```text
 core/           edl-core — Sahara, device DB, security, diagnostics
 simulator/      edl-sim — fake EDL target + fault injection
-tools/edl-cli/  CLI (validate-db, sim)
-android/        Android companion app (Kotlin/Compose, AIDL service, USB detect stubs)
+tools/edl-cli/  CLI (validate-db, sim, sim-identify)
+android/        Android companion app (Kotlin/Compose, AIDL service, USB permission/open, JNI)
+android/native/edl-jni/  Rust JNI bridge to edl-core (cargo-ndk)
 database/       chipsets, devices, manufacturers, programmers
 docs/           ANDROID, FLASHING, PROTOCOLS, TESTING, UBUNTU
 ARCHITECTURE.md · COMPATIBILITY.md · SECURITY.md · ROADMAP.md · CONTRIBUTING.md
