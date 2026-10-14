@@ -1,9 +1,11 @@
 //! Sahara host side: packet codec, explicit state machine, and a session runner.
 
+pub mod identify;
 pub mod packet;
 pub mod session;
 pub mod state;
 
+pub use identify::{run_identify, DeviceIdentity, IdentifyOptions, IdentifyReport};
 pub use packet::{Mode, Packet, PacketError};
 pub use session::{run_programmer_upload, SessionOptions, SessionReport};
 pub use state::{HostState, SaharaHost, Step};
@@ -38,6 +40,13 @@ pub enum SaharaError {
     MoreImagesRequested,
     #[error("exceeded packet budget of {0}")]
     PacketBudgetExceeded(u64),
+    #[error("unexpected packet 0x{cmd:x} while waiting for {stage}")]
+    UnexpectedInStage { stage: &'static str, cmd: u32 },
+    #[error("bad response to client command 0x{client_command:x}: {reason}")]
+    BadExecResponse {
+        client_command: u32,
+        reason: &'static str,
+    },
     #[error("session already finished or failed")]
     Terminated,
 }
