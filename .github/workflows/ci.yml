@@ -39,7 +39,9 @@ jobs:
             unzip -l app/build/outputs/apk/debug/app-debug.apk | grep "lib/$abi/libedl_jni.so"
           done
       # Signed with the ephemeral debug key, so it is not bind-compatible with a fleet-signed Droidcommand.
+      # A full account artifact storage quota shouldn't fail an otherwise good build.
       - uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: edl-commander-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
