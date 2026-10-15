@@ -1,6 +1,6 @@
 # Compatibility
 
-**Verified hardware: none.** The only device entry (`database/devices/oneplus-6.json`) is a research target at level `unknown`, with unverified model/variant and empty USB IDs.
+**Verified hardware: none.** The device entries (`database/devices/oneplus-6.json`, `database/devices/oneplus-7t-hd1905.json`) are research targets at level `unknown`, with unverified model/variant and empty USB IDs. The Android companion's `05c6:9008` detection is a USB-level hint and does not raise any level.
 
 ## Capability levels
 `unknown` → `usb_detected` → `sahara_identified` → `compatible_programmer_available` → `read_only_verified` → `backup_verified` → `write_supported` → `recovery_verified`

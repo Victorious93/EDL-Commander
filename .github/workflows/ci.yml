@@ -11,6 +11,29 @@ jobs:
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace
       - run: cargo run -p edl-cli -- validate-db database
+  android:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: "17" }
+      # `packages: ""` skips the action's default `tools` package, which the current sdkmanager no longer offers.
+      - uses: android-actions/setup-android@v3
+        with: { packages: "" }
+      - name: Install Android platform and build-tools
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+      - run: ./gradlew --no-daemon testDebugUnitTest assembleDebug
+      # Signed with the ephemeral debug key, so it is not bind-compatible with a fleet-signed Droidcommand.
+      # A full account artifact storage quota shouldn't fail an otherwise good build.
+      - uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: edl-commander-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
   audit:
     runs-on: ubuntu-latest
     steps:

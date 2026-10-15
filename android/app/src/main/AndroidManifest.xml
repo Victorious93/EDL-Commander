@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Detection/listing only; the app works (and lists nothing) without USB host hardware. -->
+    <uses-feature android:name="android.hardware.usb.host" android:required="false" />
+
+    <!--
+        Signature-level: the system grants this only to apps signed with the same key as this one
+        (the Droidcommand fleet key). Droidcommand-AI must declare <uses-permission> for it.
+        No INTERNET permission is requested; nothing leaves the device.
+    -->
+    <permission
+        android:name="io.github.victorious93.edlcommander.permission.BIND_COMPANION"
+        android:description="@string/permission_bind_companion_description"
+        android:label="@string/permission_bind_companion_label"
+        android:protectionLevel="signature" />
+
+    <application
+        android:allowBackup="false"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@android:style/Theme.Material.Light.NoActionBar">
+
+        <activity
+            android:name=".ui.MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".companion.EdlCompanionService"
+            android:exported="true"
+            android:permission="io.github.victorious93.edlcommander.permission.BIND_COMPANION">
+            <intent-filter>
+                <action android:name="io.github.victorious93.edlcommander.companion.BIND" />
+            </intent-filter>
+        </service>
+    </application>
+</manifest>

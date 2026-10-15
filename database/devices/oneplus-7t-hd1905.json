@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "id": "oneplus-7t-hd1905",
+  "manufacturer": "oneplus",
+  "marketing_name": "OnePlus 7T",
+  "model_number": "HD1905 (as stated by the project owner; not yet confirmed against a physical unit)",
+  "hardware_variant": "unverified",
+  "chipset": "sdm855plus",
+  "usb_ids": [],
+  "storage": "ufs",
+  "capability_level": "unknown",
+  "authentication": { "required": "unknown", "mechanism": null },
+  "programmers": [],
+  "firmware_compatibility_rules": [],
+  "recovery_writable_protected": [],
+  "partition_layout_notes": "Not yet inspected. Storage type is taken from public specifications, not from a device. No partition addresses are recorded or assumed.",
+  "verified_operations": [],
+  "known_limitations": [
+    "RESEARCH TARGET ONLY: no hardware evidence recorded; not a compatibility claim.",
+    "First planned real-device target for the Android companion; not validated.",
+    "No programmer is listed. Whether a compatible, vendor-authorized programmer exists, and whether authentication is required, is unknown.",
+    "Generic QDLoader 9008 (05c6:9008) detection is not device-specific, so usb_ids is intentionally empty."
+  ],
+  "evidence": [],
+  "last_verified": null
+}

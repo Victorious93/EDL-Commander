@@ -19,6 +19,7 @@ Layout deviation from the original brief: protocol, device, security and diagnos
 - **Pure state machine** (`SaharaHost::handle`) with no I/O; `session::run_programmer_upload` is a thin loop. Any invalid (state, packet) pair → `Failed`, terminal.
 - **Hostile-device assumptions**: strict length checks, chunk cap (1 MiB), range checks, packet budget.
 - **Android transport (Phase 3 plan)**: Kotlin owns `UsbDeviceConnection`; Rust receives a callback-based `Transport` over JNI. Desktop libusb will not be assumed to work on Android.
+- **Android control plane**: the Android app is a bound companion for Droidcommand-AI (AIDL `IEdlCompanion`, JSON command envelopes, signature-level permission). The command router sits above the safety model: write-class commands are refused, `dryRun` defaults to true. See docs/ANDROID.md.
 - **Capability ladder** is data, not code: `CapabilityLevel` in profiles, validated against evidence.
 - **Audit log** is hash-chained JSONL; the core takes timestamps from callers to stay deterministic.
 - Ubuntu GUI toolkit (Tauri vs GTK4) is **not yet chosen**; evaluation is a Phase 2 task.

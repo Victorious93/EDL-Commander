@@ -5,3 +5,4 @@
 - Database: `core/tests/database.rs` and `edl-cli validate-db`.
 - Hardware tests: none exist. They must live apart from simulated tests and be the only source of `hardware: true` evidence.
 - Simulator success never implies hardware compatibility.
+- Android: `cd android && ./gradlew testDebugUnitTest assembleDebug` (JVM tests with a fake `UsbDeviceSource`; no emulator or hardware tests exist yet).
