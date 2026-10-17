@@ -64,10 +64,21 @@ android {
         if (!skipNative) ndk { abiFilters += nativeAbis }
     }
 
+    // Debug signing: every debug build is signed with the committed per-app, NON-SECRET debug key
+    // android/signing/edl-commander-debug.keystore, so the debug signing fingerprint is stable
+    // across machines and CI runs (see android/signing/README.md). DEBUG ONLY: never for release.
+    signingConfigs {
+        getByName("debug") {
+            storeFile = rootProject.file("signing/edl-commander-debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     // Fleet signing: the companion and Droidcommand-AI must be signed with the same key for the
-    // signature-level bind permission to be granted. The key is never in the repo; supply it via
-    // environment variables. Without them, builds use the per-machine debug key, which will NOT
-    // match Droidcommand (see docs/ANDROID.md, "Same-signing").
+    // signature-level bind permission to be granted. The fleet key is never in the repo; supply it
+    // via environment variables (see docs/ANDROID.md, "Same-signing").
     val fleetKeystore = System.getenv("EDL_FLEET_KEYSTORE")
     if (!fleetKeystore.isNullOrBlank()) {
         signingConfigs {
@@ -82,7 +93,7 @@ android {
 
     buildTypes {
         debug {
-            signingConfigs.findByName("fleet")?.let { signingConfig = it }
+            signingConfig = signingConfigs.getByName("debug")
         }
         release {
             isMinifyEnabled = false

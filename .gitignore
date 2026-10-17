@@ -7,3 +7,5 @@ android/local.properties
 android/.kotlin/
 *.jks
 *.keystore
+# Per-app, non-secret DEBUG-only key (see android/signing/README.md). Real keys stay ignored.
+!android/signing/edl-commander-debug.keystore
