@@ -3,7 +3,9 @@
 
 use edl_core::device::Database;
 use edl_core::diagnostics::DiagLog;
-use edl_core::protocol::sahara::{run_programmer_upload, SessionOptions};
+use edl_core::protocol::sahara::{
+    run_identify, run_programmer_upload, IdentifyOptions, SessionOptions,
+};
 use edl_sim::{Fault, SimulatedEdlDevice};
 use std::path::Path;
 use std::process::ExitCode;
@@ -59,8 +61,31 @@ fn main() -> ExitCode {
                 }
             }
         }
+        Some("sim-identify") => {
+            let mut dev = SimulatedEdlDevice::new(0, 4096, Fault::None);
+            let mut log = DiagLog::new();
+            let r = run_identify(&mut dev, &IdentifyOptions::default(), &mut log);
+            for e in &log.events {
+                println!("[{:?}] {}: {}", e.level, e.code, e.message);
+            }
+            match r {
+                Ok(rep) => {
+                    println!(
+                        "SIMULATED identify: {:?} (not hardware evidence)",
+                        rep.identity
+                    );
+                    ExitCode::SUCCESS
+                }
+                Err(e) => {
+                    println!("SIMULATED identify failed: {e}");
+                    ExitCode::FAILURE
+                }
+            }
+        }
         _ => {
-            eprintln!("usage: edl-cli validate-db [dir] | sim [none|silent|malformed|disconnect]");
+            eprintln!(
+                "usage: edl-cli validate-db [dir] | sim [none|silent|malformed|disconnect] | sim-identify"
+            );
             ExitCode::from(2)
         }
     }

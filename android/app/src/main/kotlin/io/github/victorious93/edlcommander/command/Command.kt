@@ -28,12 +28,12 @@ data class CommandResult(
     val dryRun: Boolean = true,
 )
 
-enum class Risk { READ_ONLY, DEVICE_SESSION }
+enum class Risk { READ_ONLY, USER_PROMPT, DEVICE_SESSION }
 
 data class CommandSpec(
     val name: String,
     val risk: Risk,
-    /** False when the command only yields a plan / "unsupported" in this build. */
+    /** False when the command can only yield a plan / "unsupported" in this build. */
     val live: Boolean,
     val summary: String,
 )

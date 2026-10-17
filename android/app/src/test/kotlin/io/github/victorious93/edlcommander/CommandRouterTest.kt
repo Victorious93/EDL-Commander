@@ -1,5 +1,7 @@
 package io.github.victorious93.edlcommander
 
+import io.github.victorious93.edlcommander.audit.AuditTrail
+import io.github.victorious93.edlcommander.audit.InMemoryAuditStore
 import io.github.victorious93.edlcommander.command.CommandRouter
 import io.github.victorious93.edlcommander.command.Status
 import io.github.victorious93.edlcommander.nativecore.UnlinkedNativeCore
@@ -19,7 +21,7 @@ class CommandRouterTest {
         )
     }
 
-    private fun router(usb: UsbDeviceSource = fakeUsb) = CommandRouter(usb, UnlinkedNativeCore, "test")
+    private fun router(usb: UsbDeviceSource = fakeUsb) = CommandRouter(usb, UnlinkedNativeCore, "test", AuditTrail(UnlinkedNativeCore, InMemoryAuditStore()))
 
     private fun call(name: String?, args: String? = "{}", dryRun: Boolean = true, schema: Int = 1, r: CommandRouter = router()) =
         r.handleRaw(schema, "req-1", name, args, dryRun)
@@ -54,6 +56,7 @@ class CommandRouterTest {
         assertEquals(Status.DRY_RUN, res.status)
         assertTrue(res.payload.getJSONArray("plan").length() > 0)
         assertFalse(res.payload.getBoolean("nativeCoreLinked"))
+        assertTrue(res.payload.getJSONArray("plan").toString().contains("Stop. No programmer upload"))
     }
 
     @Test
@@ -80,14 +83,16 @@ class CommandRouterTest {
         assertFalse(features.getBoolean("flashing"))
         assertFalse(features.getBoolean("firehose"))
         assertFalse(features.getBoolean("saharaNative"))
+        assertFalse(features.getBoolean("saharaIdentifyReadOnly"))
+        assertFalse(features.getBoolean("programmerUpload"))
         assertEquals(0, res.payload.getJSONArray("verifiedDevices").length())
         assertEquals(CommandRouter.PROTOCOL_VERSION, res.payload.getInt("protocolVersion"))
     }
 
     @Test
-    fun statusIsHonestAboutScaffold() {
+    fun statusIsHonestAboutPhase() {
         val res = call("companion.status")
-        assertEquals("scaffold", res.payload.getString("phase"))
+        assertEquals("phase3_in_progress", res.payload.getString("phase"))
         assertFalse(res.payload.getBoolean("hardwareValidated"))
     }
 

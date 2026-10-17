@@ -1,0 +1,27 @@
+[package]
+name = "edl-jni"
+description = "JNI bridge exposing edl-core's read-only Sahara identify to the Android companion over a Kotlin-owned bulk transport"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[lib]
+name = "edl_jni"
+crate-type = ["cdylib", "rlib"]
+
+[features]
+# Ships the simulated target in the library so the app can exercise the whole JNI path without
+# hardware. Results from it are always flagged `simulated`. Release APKs build without it.
+default = ["sim"]
+sim = ["dep:edl-sim"]
+
+[dependencies]
+edl-core = { path = "../../../core" }
+edl-sim = { path = "../../../simulator", optional = true }
+jni = "0.21"
+serde_json.workspace = true
+
+[dev-dependencies]
+edl-sim = { path = "../../../simulator" }

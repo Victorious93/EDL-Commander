@@ -12,6 +12,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,6 +27,7 @@ import io.github.victorious93.edlcommander.command.CommandRouter
 import io.github.victorious93.edlcommander.companion.CompanionFactory
 import io.github.victorious93.edlcommander.companion.EdlCompanionService
 import io.github.victorious93.edlcommander.usb.QdLoader
+import java.util.concurrent.Executors
 
 class MainActivity : ComponentActivity() {
     private val router by lazy { CompanionFactory.createRouter(this) }
@@ -40,12 +42,21 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+private val worker = Executors.newSingleThreadExecutor()
+
 @Composable
 fun CompanionScreen(router: CommandRouter, modifier: Modifier = Modifier) {
     var lastResult by remember { mutableStateOf<CommandResult?>(null) }
+    var busy by remember { mutableStateOf(false) }
 
+    // Device I/O can block for seconds, so commands never run on the main thread.
     fun run(name: String, args: String = "{}", dryRun: Boolean = true) {
-        lastResult = router.handleRaw(CommandRouter.SCHEMA_VERSION, "ui-$name", name, args, dryRun)
+        busy = true
+        worker.execute {
+            val res = router.handleRaw(CommandRouter.SCHEMA_VERSION, "ui-$name", name, args, dryRun)
+            lastResult = res
+            busy = false
+        }
     }
 
     Column(
@@ -58,10 +69,12 @@ fun CompanionScreen(router: CommandRouter, modifier: Modifier = Modifier) {
         Text("EDL Commander companion", style = MaterialTheme.typography.headlineSmall)
         Card {
             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Scaffold only", style = MaterialTheme.typography.titleMedium)
+                Text("Phase 3 in progress - not validated on hardware", style = MaterialTheme.typography.titleMedium)
                 Text(
-                    "No hardware is supported or validated. USB access is list-only; there is no " +
-                        "Sahara, Firehose or flashing in this build.",
+                    "This build can list USB devices, ask you for USB permission, and run a read-only " +
+                        "Sahara identify (serial, hardware ID, OEM PK hash). It never uploads a programmer, " +
+                        "never uses Firehose and cannot write, flash, erase or unlock anything. " +
+                        "No device is supported or verified yet.",
                 )
             }
         }
@@ -76,13 +89,22 @@ fun CompanionScreen(router: CommandRouter, modifier: Modifier = Modifier) {
             "Detects USB ${"%04x".format(QdLoader.QUALCOMM_VID)}:${"%04x".format(QdLoader.QDLOADER_9008_PID)} " +
                 "(QDLoader 9008) by VID/PID only.",
         )
-        Button(onClick = { run("usb.list") }) { Text("List USB devices") }
-        Button(onClick = { run("sahara.identify") }) { Text("Dry-run Sahara identify (plan only)") }
-        Button(onClick = { run("companion.capabilities") }) { Text("Show capabilities") }
+        Button(enabled = !busy, onClick = { run("usb.list") }) { Text("List USB devices (refresh state)") }
+        Button(enabled = !busy, onClick = { run("usb.request_permission", dryRun = false) }) {
+            Text("Request USB permission for a 9008 device")
+        }
+        Button(enabled = !busy, onClick = { run("sahara.identify", dryRun = false) }) {
+            Text("Identify device (read-only, real)")
+        }
+        OutlinedButton(enabled = !busy, onClick = { run("sahara.identify", """{"simulate":true}""", dryRun = false) }) {
+            Text("Identify simulated device (no USB)")
+        }
+        OutlinedButton(enabled = !busy, onClick = { run("sahara.identify") }) { Text("Dry-run identify (plan only)") }
+        OutlinedButton(enabled = !busy, onClick = { run("companion.capabilities") }) { Text("Show capabilities") }
         lastResult?.let {
             Card {
                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("${it.status} / ${it.code}", style = MaterialTheme.typography.titleSmall)
+                    Text("${it.status} / ${it.code}${if (it.simulated) " (simulated)" else ""}", style = MaterialTheme.typography.titleSmall)
                     Text(it.message)
                     Text(it.payload.toString(2), style = MaterialTheme.typography.bodySmall)
                 }
