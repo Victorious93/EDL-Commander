@@ -1,4 +1,4 @@
-//! JNI entry points for `io.github.victorious93.edlcommander.nativecore.NativeLib`.
+//! JNI entry points for `ai.edlcommander.companion.nativecore.NativeLib`.
 //!
 //! Panics never cross the FFI boundary: every entry point runs under `catch_unwind` and turns a
 //! panic into a `native_panic` JSON error. Java exceptions raised by the Kotlin callbacks are
@@ -90,9 +90,7 @@ fn respond(env: &mut JNIEnv<'_>, body: Option<String>) -> jstring {
 }
 
 #[no_mangle]
-pub extern "system" fn Java_io_github_victorious93_edlcommander_nativecore_NativeLib_nativeVersion<
-    'l,
->(
+pub extern "system" fn Java_ai_edlcommander_companion_nativecore_NativeLib_nativeVersion<'l>(
     mut env: JNIEnv<'l>,
     _this: JObject<'l>,
 ) -> jstring {
@@ -101,9 +99,7 @@ pub extern "system" fn Java_io_github_victorious93_edlcommander_nativecore_Nativ
 }
 
 #[no_mangle]
-pub extern "system" fn Java_io_github_victorious93_edlcommander_nativecore_NativeLib_nativeFeatures<
-    'l,
->(
+pub extern "system" fn Java_ai_edlcommander_companion_nativecore_NativeLib_nativeFeatures<'l>(
     mut env: JNIEnv<'l>,
     _this: JObject<'l>,
 ) -> jstring {
@@ -112,7 +108,7 @@ pub extern "system" fn Java_io_github_victorious93_edlcommander_nativecore_Nativ
 }
 
 #[no_mangle]
-pub extern "system" fn Java_io_github_victorious93_edlcommander_nativecore_NativeLib_nativeAuthorizeIdentify<
+pub extern "system" fn Java_ai_edlcommander_companion_nativecore_NativeLib_nativeAuthorizeIdentify<
     'l,
 >(
     mut env: JNIEnv<'l>,
@@ -130,9 +126,7 @@ pub extern "system" fn Java_io_github_victorious93_edlcommander_nativecore_Nativ
 }
 
 #[no_mangle]
-pub extern "system" fn Java_io_github_victorious93_edlcommander_nativecore_NativeLib_nativeAuditAppend<
-    'l,
->(
+pub extern "system" fn Java_ai_edlcommander_companion_nativecore_NativeLib_nativeAuditAppend<'l>(
     mut env: JNIEnv<'l>,
     _this: JObject<'l>,
     audit: JString<'l>,
@@ -154,7 +148,7 @@ pub extern "system" fn Java_io_github_victorious93_edlcommander_nativecore_Nativ
 }
 
 #[no_mangle]
-pub extern "system" fn Java_io_github_victorious93_edlcommander_nativecore_NativeLib_nativeRecordDeniedWrite<
+pub extern "system" fn Java_ai_edlcommander_companion_nativecore_NativeLib_nativeRecordDeniedWrite<
     'l,
 >(
     mut env: JNIEnv<'l>,
@@ -174,7 +168,7 @@ pub extern "system" fn Java_io_github_victorious93_edlcommander_nativecore_Nativ
 }
 
 #[no_mangle]
-pub extern "system" fn Java_io_github_victorious93_edlcommander_nativecore_NativeLib_nativeSaharaIdentify<
+pub extern "system" fn Java_ai_edlcommander_companion_nativecore_NativeLib_nativeSaharaIdentify<
     'l,
 >(
     mut env: JNIEnv<'l>,
@@ -198,7 +192,7 @@ pub extern "system" fn Java_io_github_victorious93_edlcommander_nativecore_Nativ
 }
 
 #[no_mangle]
-pub extern "system" fn Java_io_github_victorious93_edlcommander_nativecore_NativeLib_nativeSaharaIdentifySimulated<
+pub extern "system" fn Java_ai_edlcommander_companion_nativecore_NativeLib_nativeSaharaIdentifySimulated<
     'l,
 >(
     mut env: JNIEnv<'l>,

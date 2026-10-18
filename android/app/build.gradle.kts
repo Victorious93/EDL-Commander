@@ -51,12 +51,12 @@ val rustSourceFiles = fileTree(cargoWorkspace) {
 }
 
 android {
-    namespace = "io.github.victorious93.edlcommander"
+    namespace = "ai.edlcommander.companion"
     compileSdk = 35
     ndkVersion = edlNdkVersion
 
     defaultConfig {
-        applicationId = "io.github.victorious93.edlcommander"
+        applicationId = "ai.edlcommander.companion"
         minSdk = 26
         targetSdk = 35
         versionCode = 1

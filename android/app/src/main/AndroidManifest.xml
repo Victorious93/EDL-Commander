@@ -10,7 +10,7 @@
         No INTERNET permission is requested; nothing leaves the device.
     -->
     <permission
-        android:name="io.github.victorious93.edlcommander.permission.BIND_COMPANION"
+        android:name="ai.edlcommander.companion.permission.BIND_COMPANION"
         android:description="@string/permission_bind_companion_description"
         android:label="@string/permission_bind_companion_label"
         android:protectionLevel="signature" />
@@ -31,11 +31,11 @@
         </activity>
 
         <service
-            android:name=".companion.EdlCompanionService"
+            android:name=".EdlCompanionService"
             android:exported="true"
-            android:permission="io.github.victorious93.edlcommander.permission.BIND_COMPANION">
+            android:permission="ai.edlcommander.companion.permission.BIND_COMPANION">
             <intent-filter>
-                <action android:name="io.github.victorious93.edlcommander.companion.BIND" />
+                <action android:name="ai.edlcommander.companion.BIND" />
             </intent-filter>
         </service>
     </application>

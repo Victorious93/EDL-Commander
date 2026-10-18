@@ -14,7 +14,8 @@ Status key: ✅ done and tested (simulated) · ⏳ not started
 - ✅ (written, unverified on devices) User-initiated USB permission flow (`usb.request_permission`, system dialog only), open/claim of the 9008 bulk interface, fail-closed audit log
 - ✅ (simulated/host only) `edl-jni` crate + cargo-ndk build packaged into the APK (arm64-v8a, armeabi-v7a, x86_64); callback `Transport` into `edl-core`; read-only Sahara command-mode identify (serial, HW ID, OEM PK hash) wired to `sahara.identify` with `dryRun=false`; tests against `edl-sim` and a Kotlin Sahara test double on a host JVM
 - ⏳ Run on an Android emulator and on a real device; capture real Sahara traffic and add capture-based tests
-- ⏳ Pin the Droidcommand-AI hub package and align `applicationId`/AIDL package with fleet naming
+- ✅ Align `applicationId`/AIDL package with fleet naming (`ai.edlcommander.companion`)
+- ⏳ Pin the Droidcommand-AI hub package
 - ⏳ Droidcommand-AI side of the binding (lives in that repo)
 - Out of scope for this phase: programmer upload, Firehose, any write path
 - Hardware validation: none performed.
