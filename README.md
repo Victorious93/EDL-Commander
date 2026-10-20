@@ -1,4 +1,8 @@
 <p align="center">
+  <img src="assets/logo.png" alt="EDL-Commander logo" width="200">
+</p>
+
+<p align="center">
   <img src="docs/logo-512.png" alt="EDL Commander logo" width="200">
 </p>
 
