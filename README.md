@@ -13,6 +13,8 @@ Open-source, **safety-first** framework for Qualcomm **Emergency Download (EDL)*
 > **Status: Phase 1 (foundation) complete; Phase 3 (Android companion) in progress.** **No real hardware has been tested**, and no device is supported or verified. Nothing here can flash a device.
 > There is no Firehose, no programmer upload and no Ubuntu app. The Android app (draft, unverified on devices) can list USB devices, ask the user for USB permission for a `05c6:9008` device, and run a **read-only** Sahara identify (serial, hardware ID, OEM PK hash) through a Rust JNI library. Only host/JVM and simulator tests have run. See [ROADMAP.md](ROADMAP.md) and [docs/ANDROID.md](docs/ANDROID.md).
 
+> **New here?** Read the [user manual](docs/MANUAL.md).
+
 ## What exists today
 
 | Component | State |
@@ -75,7 +77,7 @@ tools/edl-cli/  CLI (validate-db, sim, sim-identify)
 android/        Android companion app (Kotlin/Compose, AIDL service, USB permission/open, JNI)
 android/native/edl-jni/  Rust JNI bridge to edl-core (cargo-ndk)
 database/       chipsets, devices, manufacturers, programmers
-docs/           ANDROID, FLASHING, PROTOCOLS, TESTING, UBUNTU
+docs/           MANUAL, ANDROID, FLASHING, PROTOCOLS, TESTING, UBUNTU
 ARCHITECTURE.md · COMPATIBILITY.md · SECURITY.md · ROADMAP.md · CONTRIBUTING.md
 ```
 

@@ -26,6 +26,7 @@ import ai.edlcommander.companion.command.CommandResult
 import ai.edlcommander.companion.command.CommandRouter
 import ai.edlcommander.companion.CompanionFactory
 import ai.edlcommander.companion.EdlCompanionService
+import ai.edlcommander.companion.help.HelpScreen
 import ai.edlcommander.companion.usb.QdLoader
 import java.util.concurrent.Executors
 
@@ -36,7 +37,14 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             MaterialTheme {
-                Scaffold { padding -> CompanionScreen(router, Modifier.padding(padding)) }
+                var showHelp by remember { mutableStateOf(false) }
+                Scaffold { padding ->
+                    if (showHelp) {
+                        HelpScreen(onBack = { showHelp = false }, modifier = Modifier.padding(padding))
+                    } else {
+                        CompanionScreen(router, Modifier.padding(padding), onHelp = { showHelp = true })
+                    }
+                }
             }
         }
     }
@@ -45,7 +53,7 @@ class MainActivity : ComponentActivity() {
 private val worker = Executors.newSingleThreadExecutor()
 
 @Composable
-fun CompanionScreen(router: CommandRouter, modifier: Modifier = Modifier) {
+fun CompanionScreen(router: CommandRouter, modifier: Modifier = Modifier, onHelp: () -> Unit = {}) {
     var lastResult by remember { mutableStateOf<CommandResult?>(null) }
     var busy by remember { mutableStateOf(false) }
 
@@ -67,6 +75,7 @@ fun CompanionScreen(router: CommandRouter, modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text("EDL Commander companion", style = MaterialTheme.typography.headlineSmall)
+        OutlinedButton(onClick = onHelp) { Text("Help / Manual") }
         Card {
             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text("Phase 3 in progress - not validated on hardware", style = MaterialTheme.typography.titleMedium)
