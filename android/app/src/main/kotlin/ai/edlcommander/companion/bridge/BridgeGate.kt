@@ -136,7 +136,9 @@ class BridgeGate(
                 "'$actionRef' is treated as destructive; remote execution is never allowed (local user approval on this device only)."
         }
         if (!policy.known) return BridgeError.NOT_FOUND to "Unknown action '$actionRef'."
-        if (!policy.remoteAllowed) return BridgeError.UNAUTHORIZED to "'$actionRef' is not remotely allowed."
+        // UNIFIED_BACKUP spec section 6: a known, non-destructive op with remoteAllowed=false is
+        // capability_off for a remote caller (config.export / config.import). Destructive ops stay unauthorized above.
+        if (!policy.remoteAllowed) return BridgeError.CAPABILITY_OFF to "'$actionRef' is not remotely available (remoteAllowed=false); use the app on this device."
         return null
     }
 

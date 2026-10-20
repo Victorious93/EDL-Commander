@@ -105,7 +105,7 @@ Frozen spec: `Victorious93/droidcommand-AI` `docs/specs/UNIFIED_BACKUP.md` (bund
 | `config.export` | action | **false** | false |
 | `config.import` | action | **false** | **true** |
 
-- **Remote:** both are refused with `unauthorized` (as `op` or as `remote.command` `actionRef`, including dry runs) after the usual replay/expiry/switch checks. Nothing is read or written. (The spec's error table lists `capability_off` for "remoteAllowed=false for a remote caller"; this companion returns `unauthorized`, consistent with every other remote-denied action here.)
+- **Remote:** both are refused with `capability_off` (spec section 6: "remoteAllowed=false for a remote caller"), whether sent as `op` or as a `remote.command` `actionRef`, dry runs included, after the usual replay/expiry/switch checks. Nothing is read or written. Destructive ops are unchanged and still return `unauthorized`.
 - **Local:** the companion UI has a "Settings backup" card: Export, Preview import (dry run), and Apply import, which needs an on-device confirmation dialog. `ConfigBackup` implements the spec.
 - **Payload:** one `UnifiedBackupEntry` for `ai.edlcommander.companion`, `schemaVersion: 1`, holding `{"preferences": {...}}` from an explicit allowlist of preference keys. **Preferences only**: never signing keys, secrets or firehose/programmer/loader paths, and never the remote-control switch. This build has no exportable user preferences yet, so the allowlist is empty and an export carries `preferences: {}`.
 - **Wrapping:** `raw-aes-256-gcm` (AES-256-GCM, 12-byte IV, 128-bit tag, record `v1.<b64url iv>.<b64url ct>`, AAD `packageName|schemaVersion|sourceNodeRef`) when a key is supplied. The in-app export uses `wrapping: "none"` with `clearPayload` (the spec's local-dev format), because Android Keystore wrapping isn't implemented (the spec also leaves it undone).
@@ -123,13 +123,13 @@ Frozen spec: `Victorious93/droidcommand-AI` `docs/specs/UNIFIED_BACKUP.md` (bund
 | `not_paired` | DENIED | caller identity unresolvable |
 | `not_found` | UNSUPPORTED | unknown actionRef |
 | `internal` | ERROR | replay cache full; router `ERROR` |
-| `unauthorized` | DENIED | destructive / not remotely allowed; router `DENIED` |
+| `unauthorized` | DENIED | destructive action; router `DENIED` |
 | `replay_detected` | INVALID | duplicate nonce |
 | `expired` | INVALID | TTL or skew |
 | `external_control_disabled` | DENIED | local switch off |
 | `confirmation_required` | DENIED, or OK when a prompt was shown | local user action pending (USB permission) |
 | `unsupported_op` | UNSUPPORTED | unknown op |
-| `capability_off` | UNSUPPORTED | action exists but is not available in this build (e.g. native core not linked) |
+| `capability_off` | UNSUPPORTED | action exists but is not available in this build (e.g. native core not linked), or a non-destructive action with `remoteAllowed: false` (`config.export`/`config.import`) from a remote caller |
 
 ## Remote-control switch
 

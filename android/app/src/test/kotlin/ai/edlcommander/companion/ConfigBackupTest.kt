@@ -58,7 +58,7 @@ class ConfigBackupTest {
     }
 
     @Test
-    fun remoteCallsAreRefusedUnauthorizedAndTouchNothing() {
+    fun remoteCallsAreCapabilityOffAndTouchNothing() {
         val core = FakeNativeCore()
         val router = CommandRouter(UsbDeviceSource { emptyList() }, core, "t", AuditTrail(core, InMemoryAuditStore()))
         val gate = BridgeGate(router, InMemoryRemoteControlSetting(true), clock = { 5_000_000L })
@@ -70,8 +70,10 @@ class ConfigBackupTest {
             req("config.export", null, false), req("config.import", null, false), req("config.import", null, true),
             req("remote.command", "config.export", false), req("remote.command", "config.import", true),
         )) {
-            assertEquals(BridgeError.UNAUTHORIZED, gate.handle(r, "android:uid/1/x").error)
+            assertEquals(BridgeError.CAPABILITY_OFF, gate.handle(r, "android:uid/1/x").error)
         }
+        // Destructive ops are still unauthorized, not capability_off.
+        assertEquals(BridgeError.UNAUTHORIZED, gate.handle(req("remote.command", "flash.boot", true), "android:uid/1/x").error)
         assertTrue(core.calls.isEmpty())
     }
 
