@@ -27,6 +27,9 @@ enum class BridgeOp(val wire: String) {
     REMOTE_COMMAND("remote.command"),
     MACRO_STEP("macro.step"),
     MACRO_RUN("macro.run"),
+
+    /** Fleet STATUS-TRAY op (droidcommand-AI docs/specs/STATUS_TRAY.md). Read-only. */
+    NODE_STATUS_GET("node.status.get"),
     ;
 
     companion object {

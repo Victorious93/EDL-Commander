@@ -8,7 +8,7 @@ Nothing here has been exercised against a real controller or real hardware. All 
 
 | Field | Type | Notes |
 |---|---|---|
-| `op` | string | `capabilities.get` \| `remote.command` \| `macro.step` \| `macro.run`. Anything else: `unsupported_op` |
+| `op` | string | `capabilities.get` \| `remote.command` \| `macro.step` \| `macro.run` \| `node.status.get` (STATUS-TRAY, below). Anything else: `unsupported_op` |
 | `requestId` | string | 1..128 chars, echoed back |
 | `targetNodeRef` | string | Informational echo in this version (max 256 chars) |
 | `actionRef` | string | Dotted action, e.g. `usb.list` (`remote.command`, `macro.step`) |
@@ -83,6 +83,18 @@ Destructive actions are refused remotely with `unauthorized`, including with `dr
 - `remote.command`: one action through the router.
 - `macro.step`: as `remote.command`; payload echoes `macroId`, `stepIndex`, `onError`. Sequencing is the controller's job.
 - `macro.run`: all steps are classified first. `dryRun=true` returns `DRY_RUN` with a per-step plan (`kind`, `remoteAllowed`, `requiresConfirm`, `verdict`) and **never reaches the router or a device**, destructive steps included. `dryRun=false`: if any step would be refused, nothing runs (all-or-nothing preflight); otherwise steps run in order, stopping at the first failure unless that step has `onError: continue`. The macro's `errorCode` is the first step error.
+
+## `node.status.get` (fleet STATUS-TRAY)
+
+Frozen spec: `Victorious93/droidcommand-AI` `docs/specs/STATUS_TRAY.md`. Carried over the same envelope, either as `op = "node.status.get"` (the spec's `operation`) or as `remote.command` with `actionRef = "node.status.get"`.
+
+- Capabilities descriptor: `{name: "node.status.get", kind: "read", remoteAllowed: true, requiresConfirm: false}`.
+- Result (`payloadJson`): one `NodeStatusSnapshot`: `nodeId` (the applicationId `ai.edlcommander.companion`), `packageName`, `connectionClass: "BOUND_COMPANION"`, `updatedAtMs`, and `domains` with a single `node_health` entry (`ok` with the native core linked, `degraded` without it; short `detail`, max 200 characters).
+- Built from in-process app state only. It never touches USB, Sahara, the audit log or any write path.
+- Optional `params.nodeId` (or `params.args.nodeId`): if it doesn't match this node the result is `not_found`.
+- **Remote-control switch:** the spec says remote pulls fail closed with `external_control_disabled` while the switch is OFF, so `node.status.get` is refused while it is off. Only `capabilities.get` answers then.
+- Replay, expiry and pairing checks apply as for every op. As the spec says, the advisory `destructive` flag is ignored for gating on this read.
+- The snapshot encoder refuses (`invalid_parameters`) a `detail` that contains forbidden names (password, token, secret, apiKey, whitelist, signing/private key, …) or is over 200 characters; it does not silently strip.
 
 ## Errors
 

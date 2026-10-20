@@ -4,6 +4,7 @@ import android.content.Context
 import ai.edlcommander.companion.BuildConfig
 import ai.edlcommander.companion.audit.AuditTrail
 import ai.edlcommander.companion.audit.FileAuditStore
+import ai.edlcommander.companion.bridge.NodeStatusProvider
 import ai.edlcommander.companion.bridge.PreferencesRemoteControlSetting
 import ai.edlcommander.companion.bridge.RemoteDispatcher
 import ai.edlcommander.companion.command.CommandRouter
@@ -44,7 +45,12 @@ class CompanionRuntime private constructor(context: Context) {
             permissions = permissions,
             sessions = AndroidEdlSessionOpener(app),
         )
-        remote = RemoteDispatcher(router, remoteControl)
+        val nodeStatus = NodeStatusProvider(
+            nodeId = BuildConfig.APPLICATION_ID,
+            packageName = app.packageName,
+            nativeCoreLinked = { nativeCore.isLinked },
+        )
+        remote = RemoteDispatcher(router, remoteControl, nodeStatus)
     }
 
     companion object {

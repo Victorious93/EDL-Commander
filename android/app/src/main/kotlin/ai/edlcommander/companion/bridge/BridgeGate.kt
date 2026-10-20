@@ -29,6 +29,7 @@ class BridgeGate(
     private val remoteControl: RemoteControlSetting,
     private val nonces: NonceCache = NonceCache(),
     private val clock: () -> Long = System::currentTimeMillis,
+    private val nodeStatus: NodeStatusProvider? = null,
 ) {
     /** @param sourceNodeRef derived by the service from the Binder calling uid; null = unknown caller. */
     fun handle(req: BridgeRequest, sourceNodeRef: String?): BridgeResult {
@@ -87,6 +88,11 @@ class BridgeGate(
             BridgeOp.REMOTE_COMMAND -> single(ctx, req.actionRef, params, JSONObject())
             BridgeOp.MACRO_STEP -> macroStep(ctx, params)
             BridgeOp.MACRO_RUN -> macroRun(ctx)
+            // STATUS_TRAY spec section 5: `destructive` is advisory and ignored for gating on this read.
+            BridgeOp.NODE_STATUS_GET -> {
+                val r = runAction(id, NodeStatusProvider.OP, params, req.dryRun)
+                BridgeResult(r, mapRouter(r), opWire, source)
+            }
         }
     }
 
@@ -122,7 +128,9 @@ class BridgeGate(
     /** Pre-execution decision for one action; null means it may be handed to the router. */
     private fun preflight(actionRef: String, advisoryDestructive: Boolean): Pair<BridgeError, String>? {
         val policy = ActionClassifier.classify(actionRef)
-        if (ActionClassifier.effectiveKind(policy, advisoryDestructive) == ActionKind.DESTRUCTIVE) {
+        // STATUS_TRAY spec: the advisory flag is ignored for gating on node.status.get (read-only, no device I/O).
+        val advisory = advisoryDestructive && actionRef != NodeStatusProvider.OP
+        if (ActionClassifier.effectiveKind(policy, advisory) == ActionKind.DESTRUCTIVE) {
             return BridgeError.UNAUTHORIZED to
                 "'$actionRef' is treated as destructive; remote execution is never allowed (local user approval on this device only)."
         }
@@ -134,7 +142,7 @@ class BridgeGate(
     private fun single(ctx: Ctx, actionRef: String?, params: JSONObject, extra: JSONObject): BridgeResult {
         if (actionRef.isNullOrEmpty()) return err(ctx, BridgeError.INVALID_PARAMETERS, "actionRef is required", extra)
         preflight(actionRef, ctx.req.destructive)?.let { (e, m) -> return err(ctx, e, m, extra.put("actionRef", actionRef)) }
-        val r = router.handle(Command(ctx.id, actionRef, params, ctx.req.dryRun))
+        val r = runAction(ctx.id, actionRef, params, ctx.req.dryRun)
         extra.keys().forEach { r.payload.put(it, extra.get(it)) }
         return BridgeResult(r, mapRouter(r), ctx.op, ctx.source)
     }
@@ -188,7 +196,7 @@ class BridgeGate(
         val results = JSONArray()
         var firstError: BridgeError? = null
         for ((i, s) in steps.withIndex()) {
-            val r = router.handle(Command(ctx.id, s.step.actionRef, JSONObject(s.step.paramsJson), false))
+            val r = runAction(ctx.id, s.step.actionRef, JSONObject(s.step.paramsJson), false)
             val e = mapRouter(r)
             results.put(
                 JSONObject().put("stepIndex", i).put("actionRef", s.step.actionRef).put("status", r.status.name.lowercase())
@@ -205,6 +213,20 @@ class BridgeGate(
         } else {
             err(ctx, firstError, "Macro step failed.", base)
         }
+    }
+
+    /** Dispatch for actions the bridge serves itself (node.status.get); everything else goes to the router. */
+    private fun runAction(id: String, actionRef: String, params: JSONObject, dryRun: Boolean): CommandResult {
+        if (actionRef != NodeStatusProvider.OP) return router.handle(Command(id, actionRef, params, dryRun))
+        val provider = nodeStatus
+            ?: return CommandResult(id, Status.UNSUPPORTED, BridgeError.CAPABILITY_OFF.wire, "node.status.get is not available in this build.", dryRun = dryRun)
+        val requested = params.optString("nodeId", "").ifEmpty { params.optJSONObject("args")?.optString("nodeId", "").orEmpty() }
+        if (!provider.matches(requested)) {
+            return CommandResult(id, Status.UNSUPPORTED, BridgeError.NOT_FOUND.wire, "nodeId does not match this node.", dryRun = dryRun)
+        }
+        val snapshot = provider.snapshot()
+            ?: return CommandResult(id, Status.INVALID, BridgeError.INVALID_PARAMETERS.wire, "Snapshot refused by the privacy rules.", dryRun = dryRun)
+        return CommandResult(id, Status.OK, "ok", "Node status snapshot (app state only; not hardware evidence).", snapshot, dryRun = dryRun)
     }
 
     private class ParsedStep(val step: BridgeStep, val onError: OnError)
@@ -243,6 +265,8 @@ class BridgeGate(
 
         /** Maps an existing router result onto the frozen vocabulary (null = success). */
         fun mapRouter(r: CommandResult): BridgeError? = when {
+            r.status != Status.OK && r.status != Status.DRY_RUN && BridgeError.entries.any { it.wire == r.code } ->
+                BridgeError.entries.first { it.wire == r.code }
             r.code == "permission_prompt_shown" -> BridgeError.CONFIRMATION_REQUIRED
             r.status == Status.OK || r.status == Status.DRY_RUN -> null
             r.code == "unknown_command" -> BridgeError.NOT_FOUND

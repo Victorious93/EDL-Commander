@@ -11,7 +11,8 @@ import ai.edlcommander.companion.command.Status
 class RemoteDispatcher(
     private val router: CommandRouter,
     private val remoteControl: RemoteControlSetting,
-    val gate: BridgeGate = BridgeGate(router, remoteControl),
+    nodeStatus: NodeStatusProvider? = null,
+    val gate: BridgeGate = BridgeGate(router, remoteControl, nodeStatus = nodeStatus),
 ) {
     fun bridge(req: BridgeRequest, sourceNodeRef: String?): BridgeResult = gate.handle(req, sourceNodeRef)
 

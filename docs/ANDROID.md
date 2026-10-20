@@ -83,6 +83,7 @@ The frozen fleet remote-control envelope (`BRIDGE_PROTOCOL_MAJOR=1`, `MINOR=1`) 
 - Expiry (TTL default 120 s, max 300 s; skew limit 120 s), duplicate-nonce rejection keyed by `(sourceNodeRef, nonce)` for 10 minutes, and `sourceNodeRef` derived from the Binder calling uid.
 - Flash, bootloader, EDL-write, erase, unlock and similar actions are classified `destructive`, `remoteAllowed: false`, and refused with `unauthorized` (also in dry runs), before the router is reached. The advisory `destructive` flag can only raise the classification.
 - `macro.run` with `dryRun=true` only returns a classified plan; it never reaches the router or a device.
+- `node.status.get` (fleet STATUS-TRAY) returns a `NodeStatusSnapshot` with a single `node_health` domain, built from app state only (no USB or Sahara). It is refused with `external_control_disabled` while remote control is off.
 
 ## Same-signing and permissions
 

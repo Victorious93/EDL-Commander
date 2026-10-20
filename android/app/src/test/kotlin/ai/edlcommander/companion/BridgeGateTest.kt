@@ -42,8 +42,8 @@ class BridgeGateTest {
         )
         val setting = InMemoryRemoteControlSetting(enabled)
         var clock = now
-        val bridge = BridgeGate(router, setting, NonceCache(capacity = nonceCapacity)) { clock }
-        val remote = RemoteDispatcher(router, setting, bridge)
+        val bridge = BridgeGate(router, setting, NonceCache(capacity = nonceCapacity), clock = { clock })
+        val remote = RemoteDispatcher(router, setting, gate = bridge)
 
         /** No device I/O, no permission prompt, no authorize/identify happened. */
         fun assertUntouched() {
@@ -290,7 +290,7 @@ class BridgeGateTest {
         assertEquals("destructive", byName.getValue("flash.*").getString("kind"))
         assertEquals("destructive", byName.getValue("edl.write").getString("kind"))
         assertEquals(
-            listOf("capabilities.get", "remote.command", "macro.step", "macro.run"),
+            listOf("capabilities.get", "remote.command", "macro.step", "macro.run", "node.status.get"),
             p.getJSONArray("envelopeOps").let { a -> (0 until a.length()).map { a.getString(it) } },
         )
     }
@@ -420,7 +420,7 @@ class BridgeGateTest {
     @Test
     fun capabilityOffWhenNativeCoreMissing() {
         val router = CommandRouter(UsbDeviceSource { emptyList() }, UnlinkedNativeCore, "t", AuditTrail(UnlinkedNativeCore, InMemoryAuditStore()))
-        val r = BridgeGate(router, InMemoryRemoteControlSetting(true)) { now }.handle(req(actionRef = "sahara.identify"), source)
+        val r = BridgeGate(router, InMemoryRemoteControlSetting(true), clock = { now }).handle(req(actionRef = "sahara.identify"), source)
         assertEquals(BridgeError.CAPABILITY_OFF, r.error)
     }
 

@@ -29,6 +29,8 @@ object ActionClassifier {
         // Shows Android's USB permission dialog; the user confirms on the device.
         ActionPolicy("usb.request_permission", ActionKind.ACTION, remoteAllowed = true, requiresConfirm = true, known = true),
         // Read-only Sahara command mode (serial, HW ID, OEM PK hash). Still needs a user-granted USB permission.
+        // Fleet status tray: built from app state only, never touches USB/Sahara.
+        ActionPolicy("node.status.get", ActionKind.READ, remoteAllowed = true, requiresConfirm = false, known = true),
         ActionPolicy("sahara.identify", ActionKind.READ, remoteAllowed = true, requiresConfirm = false, known = true),
     ).associateBy { it.name }
 
