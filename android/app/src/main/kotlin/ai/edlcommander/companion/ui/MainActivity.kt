@@ -39,6 +39,7 @@ import ai.edlcommander.companion.bridge.ConfigBackup
 import ai.edlcommander.companion.bridge.PreferencesRemoteControlSetting
 import ai.edlcommander.companion.command.Status
 import ai.edlcommander.companion.EdlCompanionService
+import ai.edlcommander.companion.help.HelpScreen
 import ai.edlcommander.companion.usb.QdLoader
 import java.util.concurrent.Executors
 
@@ -51,7 +52,20 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             MaterialTheme {
-                Scaffold { padding -> CompanionScreen(router, remoteControl, configBackup, Modifier.padding(padding)) }
+                var showHelp by remember { mutableStateOf(false) }
+                Scaffold { padding ->
+                    if (showHelp) {
+                        HelpScreen(onBack = { showHelp = false }, modifier = Modifier.padding(padding))
+                    } else {
+                        CompanionScreen(
+                            router,
+                            remoteControl,
+                            configBackup,
+                            Modifier.padding(padding),
+                            onHelp = { showHelp = true },
+                        )
+                    }
+                }
             }
         }
     }
@@ -65,6 +79,7 @@ fun CompanionScreen(
     remoteControl: PreferencesRemoteControlSetting,
     configBackup: ConfigBackup,
     modifier: Modifier = Modifier,
+    onHelp: () -> Unit = {},
 ) {
     var importText by remember { mutableStateOf("") }
     var confirmImport by remember { mutableStateOf(false) }
@@ -90,6 +105,7 @@ fun CompanionScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text("EDL Commander companion", style = MaterialTheme.typography.headlineSmall)
+        OutlinedButton(onClick = onHelp) { Text("Help / Manual") }
         Card {
             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text("Phase 3 in progress - not validated on hardware", style = MaterialTheme.typography.titleMedium)
