@@ -9,7 +9,20 @@ fun interface CallerVerifier {
     fun isAllowed(callingUid: Int): Boolean
 }
 
+/** Derives the bridge `sourceNodeRef` from the Binder calling uid (never from caller data). */
+fun interface CallerIdentityResolver {
+    /** Null when the caller cannot be identified (reported as not_paired). */
+    fun nodeRef(callingUid: Int): String?
+}
+
 object CallerPolicy {
+    /** Stable node reference for a caller: uid plus its sorted package names. */
+    fun nodeRef(callingUid: Int, packages: List<String>, isSelf: Boolean): String? = when {
+        isSelf -> "android:self"
+        packages.isEmpty() -> null
+        else -> "android:uid/$callingUid/" + packages.sorted().joinToString("+")
+    }
+
     /**
      * Pure decision: the caller must share our signing certificate, and, when an allowlist is
      * configured, must also run under one of the allowlisted package names.
@@ -27,7 +40,7 @@ object CallerPolicy {
 class SignatureCallerVerifier(
     context: Context,
     private val allowlist: Set<String> = HUB_PACKAGE_ALLOWLIST,
-) : CallerVerifier {
+) : CallerVerifier, CallerIdentityResolver {
     private val pm: PackageManager = context.applicationContext.packageManager
 
     override fun isAllowed(callingUid: Int): Boolean {
@@ -36,6 +49,12 @@ class SignatureCallerVerifier(
         val packages = pm.getPackagesForUid(callingUid)?.toList().orEmpty()
         return CallerPolicy.decide(same, packages, allowlist)
     }
+
+    override fun nodeRef(callingUid: Int): String? = CallerPolicy.nodeRef(
+        callingUid,
+        pm.getPackagesForUid(callingUid)?.toList().orEmpty(),
+        callingUid == Process.myUid(),
+    )
 
     companion object {
         /**

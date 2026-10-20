@@ -10,7 +10,8 @@ import android.os.IBinder
  */
 class EdlCompanionService : Service() {
     private val binder by lazy {
-        CompanionBinder(SignatureCallerVerifier(this), CompanionFactory.createRouter(this))
+        val verifier = SignatureCallerVerifier(this)
+        CompanionBinder(verifier, CompanionRuntime.get(this).remote, verifier)
     }
 
     override fun onBind(intent: Intent?): IBinder = binder

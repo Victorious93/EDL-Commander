@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -14,29 +15,34 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import ai.edlcommander.companion.command.CommandResult
 import ai.edlcommander.companion.command.CommandRouter
 import ai.edlcommander.companion.CompanionFactory
+import ai.edlcommander.companion.CompanionRuntime
+import ai.edlcommander.companion.bridge.PreferencesRemoteControlSetting
 import ai.edlcommander.companion.EdlCompanionService
 import ai.edlcommander.companion.usb.QdLoader
 import java.util.concurrent.Executors
 
 class MainActivity : ComponentActivity() {
     private val router by lazy { CompanionFactory.createRouter(this) }
+    private val remoteControl by lazy { CompanionRuntime.get(this).remoteControl }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             MaterialTheme {
-                Scaffold { padding -> CompanionScreen(router, Modifier.padding(padding)) }
+                Scaffold { padding -> CompanionScreen(router, remoteControl, Modifier.padding(padding)) }
             }
         }
     }
@@ -45,7 +51,8 @@ class MainActivity : ComponentActivity() {
 private val worker = Executors.newSingleThreadExecutor()
 
 @Composable
-fun CompanionScreen(router: CommandRouter, modifier: Modifier = Modifier) {
+fun CompanionScreen(router: CommandRouter, remoteControl: PreferencesRemoteControlSetting, modifier: Modifier = Modifier) {
+    var remoteEnabled by remember { mutableStateOf(remoteControl.isEnabled()) }
     var lastResult by remember { mutableStateOf<CommandResult?>(null) }
     var busy by remember { mutableStateOf(false) }
 
@@ -83,6 +90,25 @@ fun CompanionScreen(router: CommandRouter, modifier: Modifier = Modifier) {
                 Text("Droidcommand-AI binding", style = MaterialTheme.typography.titleMedium)
                 Text("Bind action: ${EdlCompanionService.ACTION_BIND}")
                 Text("Requires the same signing key as the hub (signature permission).")
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Allow remote control", Modifier.weight(1f))
+                    Switch(
+                        checked = remoteEnabled,
+                        onCheckedChange = {
+                            remoteControl.setEnabled(it)
+                            remoteEnabled = remoteControl.isEnabled()
+                        },
+                    )
+                }
+                Text(
+                    if (remoteEnabled) {
+                        "On: a bound fleet controller may run read-only commands and request USB permission prompts. " +
+                            "Flashing, writing, erasing and unlocking can never be triggered remotely."
+                    } else {
+                        "Off (default): remote callers only get capabilities; everything else returns external_control_disabled."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                )
             }
         }
         Text(

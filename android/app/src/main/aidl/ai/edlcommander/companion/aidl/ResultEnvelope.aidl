@@ -25,4 +25,18 @@ parcelable ResultEnvelope {
     boolean simulated;
     /** Echo of the dry-run mode the command was evaluated under. */
     boolean dryRun = true;
+
+    // ---- Bridge envelope v1.1. Appended fields only; zero/null for legacy calls. ----
+    int bridgeProtocolMajor = 0;
+    int bridgeProtocolMinor = 0;
+    /** Echo of the request op. */
+    String op;
+    /**
+     * Frozen error code (invalid_parameters, not_paired, not_found, internal, unauthorized,
+     * replay_detected, expired, external_control_disabled, confirmation_required,
+     * unsupported_op, capability_off), or empty on success. `code` keeps the detailed code.
+     */
+    String errorCode = "";
+    /** Caller identity as derived by the companion from the Binder calling uid. */
+    String sourceNodeRef;
 }
