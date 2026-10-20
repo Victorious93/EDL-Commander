@@ -129,6 +129,23 @@ class ConfigBackup(
     }
 
     /**
+     * Export meant to leave the app on this device (shown, saved, shared or copied). Fleet rule:
+     * until Android Keystore wrapping is implemented, an on-device backup must never use
+     * `wrapping: none`, so this refuses unless an encryption key is configured, and it never
+     * produces a clear payload.
+     */
+    fun exportForDevice(): BackupOutcome {
+        if (aead == null) {
+            return fail(
+                BridgeError.CAPABILITY_OFF,
+                "On-device backup export is disabled until Android Keystore wrapping is implemented; " +
+                    "an unencrypted (wrapping: none) backup file is never written, saved or shared.",
+            )
+        }
+        return export(clearPayload = false)
+    }
+
+    /**
      * Import, spec section 4 order. [dryRun] (default) returns the plan and writes nothing.
      * Applying requires [confirmedOnDevice]; otherwise `confirmation_required`.
      */

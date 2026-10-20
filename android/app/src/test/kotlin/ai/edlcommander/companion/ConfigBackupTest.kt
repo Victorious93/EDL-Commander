@@ -109,6 +109,20 @@ class ConfigBackupTest {
     }
 
     @Test
+    fun onDeviceExportRefusesWithoutKeyAndNeverEmitsWrappingNone() {
+        val noKey = ConfigBackup(InMemoryPreferenceStore(mapOf("ui.theme" to "dark")), pkg, pkg, keys, {})
+        val refused = noKey.exportForDevice()
+        assertEquals(BridgeError.CAPABILITY_OFF, refused.error)
+        assertFalse(refused.payload.has("bundle"))
+        assertTrue(refused.message.contains("Keystore"))
+        val withKey = H().backup.exportForDevice()
+        assertNull(withKey.error)
+        val bundle = withKey.payload.getJSONObject("bundle")
+        assertEquals("raw-aes-256-gcm", bundle.getString("wrapping"))
+        assertFalse(bundle.getJSONArray("entries").getJSONObject(0).has("clearPayload"))
+    }
+
+    @Test
     fun exportOfOtherPackageIsNotFound() {
         assertEquals(BridgeError.NOT_FOUND, H().backup.export(true, "com.other").error)
     }

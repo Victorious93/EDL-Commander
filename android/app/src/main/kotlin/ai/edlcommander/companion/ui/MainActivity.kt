@@ -148,12 +148,12 @@ fun CompanionScreen(
                 Text("Settings backup (config.export / config.import)", style = MaterialTheme.typography.titleMedium)
                 Text(
                     "Local only; remote callers are refused. Preferences only: never keys, secrets or loader paths. " +
-                        "This in-app export is unencrypted (wrapping \"none\"). Importing never turns remote control on; " +
-                        "an applied import turns it OFF.",
+                        "Export is disabled until Android Keystore encryption is implemented: no unencrypted backup is " +
+                        "written, saved, shared or copied. Importing never turns remote control on; an applied import turns it OFF.",
                     style = MaterialTheme.typography.bodySmall,
                 )
-                OutlinedButton(enabled = !busy, onClick = { lastResult = configBackup.export(clearPayload = true).toResult("config.export") }) {
-                    Text("Export settings")
+                OutlinedButton(enabled = !busy, onClick = { lastResult = configBackup.exportForDevice().toResult("config.export") }) {
+                    Text("Export settings (disabled: needs Keystore encryption)")
                 }
                 OutlinedTextField(value = importText, onValueChange = { importText = it }, label = { Text("Paste a backup bundle") }, modifier = Modifier.fillMaxWidth())
                 OutlinedButton(enabled = !busy && importText.isNotBlank(), onClick = {
