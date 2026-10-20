@@ -21,6 +21,14 @@ pub struct AuditLog {
     records: Vec<AuditRecord>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum AuditLoadError {
+    #[error("audit line {line} is not a valid record: {reason}")]
+    Parse { line: usize, reason: String },
+    #[error("audit hash chain does not verify")]
+    ChainBroken,
+}
+
 const GENESIS: &str = "0000000000000000000000000000000000000000000000000000000000000000";
 
 fn digest(seq: u64, ts: &str, action: &str, outcome: &str, detail: &str, prev: &str) -> String {
@@ -56,6 +64,26 @@ impl AuditLog {
             hash,
         });
         self.records.last().unwrap()
+    }
+
+    /// Rebuild a log from JSON Lines produced by [`AuditLog::write_jsonl`], verifying the whole
+    /// hash chain so new records extend it. Blank input is an empty log.
+    pub fn from_jsonl(text: &str) -> Result<AuditLog, AuditLoadError> {
+        let mut records = Vec::new();
+        for (i, line) in text.lines().enumerate() {
+            if line.trim().is_empty() {
+                continue;
+            }
+            let r: AuditRecord = serde_json::from_str(line).map_err(|e| AuditLoadError::Parse {
+                line: i + 1,
+                reason: e.to_string(),
+            })?;
+            records.push(r);
+        }
+        if !Self::verify(&records) {
+            return Err(AuditLoadError::ChainBroken);
+        }
+        Ok(AuditLog { records })
     }
 
     pub fn records(&self) -> &[AuditRecord] {
@@ -109,5 +137,30 @@ mod tests {
         let mut out = Vec::new();
         log.write_jsonl(&mut out).unwrap();
         assert_eq!(out.iter().filter(|&&b| b == b'\n').count(), 2);
+    }
+
+    #[test]
+    fn jsonl_roundtrip_extends_the_chain_and_rejects_tampering() {
+        let mut log = AuditLog::new();
+        log.append("t0", "a", "ok", "");
+        log.append("t1", "b", "denied", "why");
+        let mut out = Vec::new();
+        log.write_jsonl(&mut out).unwrap();
+        let text = String::from_utf8(out).unwrap();
+
+        let mut loaded = AuditLog::from_jsonl(&text).unwrap();
+        loaded.append("t2", "c", "ok", "");
+        assert_eq!(loaded.records().len(), 3);
+        assert!(AuditLog::verify(loaded.records()));
+
+        assert_eq!(AuditLog::from_jsonl("").unwrap().records().len(), 0);
+        assert_eq!(
+            AuditLog::from_jsonl(&text.replace("denied", "allowed")).unwrap_err(),
+            AuditLoadError::ChainBroken
+        );
+        assert!(matches!(
+            AuditLog::from_jsonl("not json\n"),
+            Err(AuditLoadError::Parse { line: 1, .. })
+        ));
     }
 }

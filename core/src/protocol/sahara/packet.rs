@@ -6,6 +6,8 @@
 //! exact size for the command, otherwise the packet is rejected.
 
 pub const HEADER_LEN: usize = 8;
+/// Largest raw `CMD_EXEC_DATA` payload this host will accept (hashes are 32-64 bytes).
+pub const MAX_RAW_RESPONSE: usize = 64;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Mode {
@@ -62,6 +64,32 @@ pub enum Packet {
     },
     Reset,
     ResetResp,
+    /// Command mode: device is ready to accept `CmdExec` requests.
+    CmdReady,
+    /// Command mode: ask the device to switch to `mode`.
+    CmdSwitchMode {
+        mode: Mode,
+    },
+    /// Command mode: execute a client command (see [`client_command`]).
+    CmdExec {
+        client_command: u32,
+    },
+    /// Command mode: device announces `resp_length` bytes of raw data for `client_command`.
+    CmdExecResp {
+        client_command: u32,
+        resp_length: u32,
+    },
+    /// Command mode: host asks the device to send the raw data announced by `CmdExecResp`.
+    CmdExecData {
+        client_command: u32,
+    },
+}
+
+/// Read-only Sahara client commands used for identification.
+pub mod client_command {
+    pub const SERIAL_NUM_READ: u32 = 0x1;
+    pub const MSM_HW_ID_READ: u32 = 0x2;
+    pub const OEM_PK_HASH_READ: u32 = 0x3;
 }
 
 pub const CMD_HELLO: u32 = 0x1;
@@ -72,6 +100,11 @@ pub const CMD_DONE: u32 = 0x5;
 pub const CMD_DONE_RESP: u32 = 0x6;
 pub const CMD_RESET: u32 = 0x7;
 pub const CMD_RESET_RESP: u32 = 0x8;
+pub const CMD_CMD_READY: u32 = 0xb;
+pub const CMD_SWITCH_MODE: u32 = 0xc;
+pub const CMD_EXEC: u32 = 0xd;
+pub const CMD_EXEC_RESP: u32 = 0xe;
+pub const CMD_EXEC_DATA: u32 = 0xf;
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum PacketError {
@@ -112,6 +145,11 @@ impl Packet {
             Packet::DoneResp { .. } => CMD_DONE_RESP,
             Packet::Reset => CMD_RESET,
             Packet::ResetResp => CMD_RESET_RESP,
+            Packet::CmdReady => CMD_CMD_READY,
+            Packet::CmdSwitchMode { .. } => CMD_SWITCH_MODE,
+            Packet::CmdExec { .. } => CMD_EXEC,
+            Packet::CmdExecResp { .. } => CMD_EXEC_RESP,
+            Packet::CmdExecData { .. } => CMD_EXEC_DATA,
         }
     }
 
@@ -155,8 +193,18 @@ impl Packet {
             Packet::EndImageTx { image_id, status } => {
                 put(&mut out, &[cmd, 16, *image_id, *status])
             }
-            Packet::Done | Packet::Reset | Packet::ResetResp => put(&mut out, &[cmd, 8]),
+            Packet::Done | Packet::Reset | Packet::ResetResp | Packet::CmdReady => {
+                put(&mut out, &[cmd, 8])
+            }
             Packet::DoneResp { image_tx_status } => put(&mut out, &[cmd, 12, *image_tx_status]),
+            Packet::CmdSwitchMode { mode } => put(&mut out, &[cmd, 12, *mode as u32]),
+            Packet::CmdExec { client_command } | Packet::CmdExecData { client_command } => {
+                put(&mut out, &[cmd, 12, *client_command])
+            }
+            Packet::CmdExecResp {
+                client_command,
+                resp_length,
+            } => put(&mut out, &[cmd, 16, *client_command, *resp_length]),
         }
         out
     }
@@ -229,6 +277,32 @@ impl Packet {
             }
             CMD_RESET => expect(8).map(|_| Packet::Reset),
             CMD_RESET_RESP => expect(8).map(|_| Packet::ResetResp),
+            CMD_CMD_READY => expect(8).map(|_| Packet::CmdReady),
+            CMD_SWITCH_MODE => {
+                expect(12)?;
+                Ok(Packet::CmdSwitchMode {
+                    mode: mode(word(b, 2))?,
+                })
+            }
+            CMD_EXEC => {
+                expect(12)?;
+                Ok(Packet::CmdExec {
+                    client_command: word(b, 2),
+                })
+            }
+            CMD_EXEC_RESP => {
+                expect(16)?;
+                Ok(Packet::CmdExecResp {
+                    client_command: word(b, 2),
+                    resp_length: word(b, 3),
+                })
+            }
+            CMD_EXEC_DATA => {
+                expect(12)?;
+                Ok(Packet::CmdExecData {
+                    client_command: word(b, 2),
+                })
+            }
             other => Err(PacketError::UnsupportedCommand(other)),
         }
     }
@@ -265,7 +339,46 @@ mod tests {
             Packet::DoneResp { image_tx_status: 1 },
             Packet::Reset,
             Packet::ResetResp,
+            Packet::CmdReady,
+            Packet::CmdSwitchMode {
+                mode: Mode::ImageTxPending,
+            },
+            Packet::CmdExec {
+                client_command: client_command::SERIAL_NUM_READ,
+            },
+            Packet::CmdExecResp {
+                client_command: client_command::MSM_HW_ID_READ,
+                resp_length: 8,
+            },
+            Packet::CmdExecData {
+                client_command: client_command::OEM_PK_HASH_READ,
+            },
         ]
+    }
+
+    #[test]
+    fn command_mode_fixture_bytes() {
+        // Synthetic fixtures for the command-mode packets (not hardware captures).
+        assert_eq!(Packet::CmdReady.encode(), [0xb, 0, 0, 0, 8, 0, 0, 0]);
+        assert_eq!(
+            Packet::CmdExec { client_command: 2 }.encode(),
+            [0xd, 0, 0, 0, 12, 0, 0, 0, 2, 0, 0, 0]
+        );
+        assert_eq!(
+            Packet::decode(&[0xe, 0, 0, 0, 16, 0, 0, 0, 3, 0, 0, 0, 32, 0, 0, 0]).unwrap(),
+            Packet::CmdExecResp {
+                client_command: 3,
+                resp_length: 32
+            }
+        );
+        assert!(matches!(
+            Packet::decode(&[0xc, 0, 0, 0, 12, 0, 0, 0, 9, 0, 0, 0]),
+            Err(PacketError::InvalidField { .. })
+        ));
+        assert!(matches!(
+            Packet::decode(&[0xf, 0, 0, 0, 8, 0, 0, 0]),
+            Err(PacketError::BadSize { .. })
+        ));
     }
 
     #[test]
@@ -331,6 +444,117 @@ mod tests {
                     .map(|i| seed.wrapping_mul(31).wrapping_add(i as u8))
                     .collect();
                 let _ = Packet::decode(&buf);
+            }
+        }
+    }
+
+    /// Tiny deterministic xorshift so the property tests need no extra dependency.
+    struct Rng(u64);
+    impl Rng {
+        fn next(&mut self) -> u64 {
+            self.0 ^= self.0 << 13;
+            self.0 ^= self.0 >> 7;
+            self.0 ^= self.0 << 17;
+            self.0
+        }
+    }
+
+    fn known_sizes() -> Vec<(u32, usize)> {
+        samples()
+            .iter()
+            .map(|p| (p.command(), p.encode().len()))
+            .collect()
+    }
+
+    #[test]
+    fn prop_every_truncation_of_valid_packets_is_rejected() {
+        for p in samples() {
+            let full = p.encode();
+            for cut in 0..full.len() {
+                assert!(
+                    Packet::decode(&full[..cut]).is_err(),
+                    "truncated {p:?} to {cut} bytes decoded"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn prop_oversized_and_padded_packets_are_rejected() {
+        for p in samples() {
+            let full = p.encode();
+            for extra in [1usize, 3, 4, 64, 4096, 1 << 16] {
+                // Padding without fixing the header: length mismatch.
+                let mut padded = full.clone();
+                padded.resize(full.len() + extra, 0xAA);
+                assert!(matches!(
+                    Packet::decode(&padded),
+                    Err(PacketError::LengthMismatch { .. })
+                ));
+                // Padding with a consistent header: still the wrong size for the command.
+                let declared = u32::try_from(padded.len()).unwrap();
+                padded[4..8].copy_from_slice(&declared.to_le_bytes());
+                assert!(matches!(
+                    Packet::decode(&padded),
+                    Err(PacketError::BadSize { .. })
+                ));
+            }
+        }
+    }
+
+    #[test]
+    fn prop_bad_declared_lengths_are_rejected() {
+        for p in samples() {
+            let full = p.encode();
+            for declared in [0u32, 1, 7, 8, 47, 49, u32::MAX, u32::MAX - 7, 0x8000_0000] {
+                if declared as usize == full.len() {
+                    continue;
+                }
+                let mut b = full.clone();
+                b[4..8].copy_from_slice(&declared.to_le_bytes());
+                assert!(matches!(
+                    Packet::decode(&b),
+                    Err(PacketError::LengthMismatch { .. })
+                ));
+            }
+        }
+    }
+
+    #[test]
+    fn prop_random_buffers_never_panic_and_accepted_ones_roundtrip() {
+        let sizes = known_sizes();
+        let mut rng = Rng(0x9E37_79B9_7F4A_7C15);
+        for _ in 0..20_000 {
+            let r = rng.next();
+            let len = (r % 96) as usize;
+            let mut b: Vec<u8> = (0..len).map(|_| rng.next() as u8).collect();
+            // Bias half the cases toward plausible headers so decoding gets past the prefix.
+            if len >= HEADER_LEN && r & 1 == 0 {
+                let (cmd, size) = sizes[(r >> 8) as usize % sizes.len()];
+                b[0..4].copy_from_slice(&cmd.to_le_bytes());
+                let declared = if r & 2 == 0 { size } else { len };
+                b[4..8].copy_from_slice(&(declared as u32).to_le_bytes());
+            }
+            if let Ok(p) = Packet::decode(&b) {
+                // Anything accepted must have exactly the canonical size and header.
+                let enc = p.encode();
+                assert_eq!(enc.len(), b.len());
+                assert_eq!(enc[..8], b[..8]);
+                assert_eq!(Packet::decode(&enc).unwrap(), p);
+            }
+        }
+    }
+
+    #[test]
+    fn prop_bit_flips_of_valid_packets_never_panic() {
+        for p in samples() {
+            let full = p.encode();
+            for byte in 0..full.len() {
+                for bit in 0..8 {
+                    let mut b = full.clone();
+                    b[byte] ^= 1 << bit;
+                    let _ = Packet::decode(&b);
+                }
             }
         }
     }

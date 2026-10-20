@@ -31,10 +31,16 @@ pub const DEFAULT_PROTECTED_PARTITIONS: &[&str] = &[
 pub enum Operation {
     EnumeratePartitions,
     ReadPartition(String),
-    UploadProgrammer { programmer_id: String },
+    UploadProgrammer {
+        programmer_id: String,
+    },
     WritePartition(String),
     ErasePartition(String),
     ResetDevice,
+    /// Read-only Sahara command-mode query (serial, hardware ID, OEM PK hash). No image is
+    /// uploaded and nothing is written. Needs no profile, because identification is how a
+    /// profile gets matched in the first place.
+    IdentifyDevice,
 }
 
 impl Operation {
@@ -54,6 +60,7 @@ impl Operation {
             Operation::WritePartition(p) => format!("write_partition:{p}"),
             Operation::ErasePartition(p) => format!("erase_partition:{p}"),
             Operation::ResetDevice => "reset_device".into(),
+            Operation::IdentifyDevice => "identify_device".into(),
         }
     }
 }
@@ -109,7 +116,7 @@ fn is_protected(name: &str) -> bool {
 }
 
 pub fn authorize(op: &Operation, ctx: &SafetyContext<'_>) -> Result<(), Denial> {
-    if let Operation::ResetDevice = op {
+    if matches!(op, Operation::ResetDevice | Operation::IdentifyDevice) {
         return Ok(());
     }
     let profile = ctx.profile.ok_or(Denial::NoProfile)?;
@@ -124,7 +131,7 @@ pub fn authorize(op: &Operation, ctx: &SafetyContext<'_>) -> Result<(), Denial> 
         }
     };
     match op {
-        Operation::ResetDevice => Ok(()),
+        Operation::ResetDevice | Operation::IdentifyDevice => Ok(()),
         Operation::UploadProgrammer { programmer_id } => {
             need_level(CapabilityLevel::CompatibleProgrammerAvailable)?;
             if !profile.programmers.contains(programmer_id) {
@@ -243,6 +250,17 @@ mod tests {
         );
         assert_eq!(authorize(&write("userdata"), &ctx), Err(Denial::NoProfile));
         assert_eq!(authorize(&Operation::ResetDevice, &ctx), Ok(()));
+    }
+
+    #[test]
+    fn identify_is_read_only_and_needs_no_profile() {
+        let ctx = SafetyContext::default();
+        assert_eq!(authorize(&Operation::IdentifyDevice, &ctx), Ok(()));
+        assert!(!Operation::IdentifyDevice.is_destructive());
+        let mut log = AuditLog::new();
+        authorize_audited(&Operation::IdentifyDevice, &ctx, &mut log, "t0").unwrap();
+        assert_eq!(log.records()[0].action, "identify_device");
+        assert_eq!(log.records()[0].outcome, "allowed");
     }
 
     #[test]
