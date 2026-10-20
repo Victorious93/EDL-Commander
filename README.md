@@ -1,4 +1,30 @@
-# EDL Commander
+<!-- victorious-fleet-readme-refresh:start -->
+<p align="center">
+  <img src="assets/logo.png" alt="EDL-Commander logo" width="200">
+</p>
+
+# EDL-Commander
+
+Safety-first Qualcomm EDL (Emergency Download mode) companion for the fleet.
+
+**Package id:** `ai.edlcommander.companion`
+
+> **Package note:** From `android/app/build.gradle.kts`. Native core via Rust/`cargo-ndk`.
+
+**Status:** scaffold / CI *(from [fleet-manifest ROADMAP](https://github.com/Victorious93/fleet-manifest/blob/main/ROADMAP.md))*
+
+## Install / build
+
+Android under `android/` plus Rust workspace. Needs Rust Android targets and `cargo-ndk` for native libs; property `edl.skipNative=true` may skip native. Typical: `cd android && ./gradlew :app:assembleDebug` — verify README/CI.
+
+_Steps above are taken from this repo’s build files / existing docs; anything not exercised in this refresh is unlabeled as verified on a device._
+
+## Victorious fleet
+
+- Monorepo: [https://github.com/Victorious93/victorious-fleet](https://github.com/Victorious93/victorious-fleet)
+- Fleet site: [https://victorious-framework.pages.dev](https://victorious-framework.pages.dev)
+
+<!-- victorious-fleet-readme-refresh:end -->
 
 Open-source, **safety-first** framework for Qualcomm **Emergency Download (EDL)** device recovery, built around a shared Rust engine with planned Ubuntu and Android-to-Android (USB OTG) frontends.
 
