@@ -59,10 +59,12 @@ class SignatureCallerVerifier(
 
     companion object {
         /**
-         * TODO(droidcommand): the Droidcommand-AI hub package name is not known to this repo.
-         * Until it is filled in, external controllers are **denied** (fail closed): an app signed
-         * with the fleet key is not enough on its own. Add the exact hub package here to enable it.
+         * Controller packages allowed to bind (fail closed: anything not listed is denied).
+         * `ai.droidcommand.app` is the Droidcommand-AI hub; release and debug builds share it.
+         *
+         * TODO(droidcommand): also pin the hub's signing certificate SHA-256 once the release
+         * cert is known. Today only the shared fleet signature plus this package name is checked.
          */
-        val HUB_PACKAGE_ALLOWLIST: Set<String> = emptySet()
+        val HUB_PACKAGE_ALLOWLIST: Set<String> = setOf("ai.droidcommand.app")
     }
 }

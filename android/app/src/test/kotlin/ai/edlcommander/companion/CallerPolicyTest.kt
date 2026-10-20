@@ -2,6 +2,7 @@ package ai.edlcommander.companion
 
 import ai.edlcommander.companion.CallerPolicy
 import ai.edlcommander.companion.usb.QdLoader
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -20,9 +21,13 @@ class CallerPolicyTest {
     }
 
     @Test
-    fun shippedAllowlistDeniesUnknownFleetSignedApps() {
+    fun shippedAllowlistAllowsOnlyDroidcommand() {
         val shipped = SignatureCallerVerifier.HUB_PACKAGE_ALLOWLIST
+        assertEquals(setOf("ai.droidcommand.app"), shipped)
+        assertTrue(CallerPolicy.decide(true, listOf("ai.droidcommand.app"), shipped))
         assertFalse(CallerPolicy.decide(true, listOf("com.example.fleet.app"), shipped))
+        assertFalse(CallerPolicy.decide(true, listOf("ai.droidcommand.app.evil"), shipped))
+        assertFalse("signature still required", CallerPolicy.decide(false, listOf("ai.droidcommand.app"), shipped))
     }
 
     @Test
