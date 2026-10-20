@@ -14,8 +14,15 @@ class CallerPolicyTest {
     }
 
     @Test
-    fun sameSignatureWithoutAllowlistIsAccepted() {
-        assertTrue(CallerPolicy.decide(true, listOf("anything"), emptySet()))
+    fun emptyAllowlistFailsClosed() {
+        assertFalse(CallerPolicy.decide(true, listOf("anything"), emptySet()))
+        assertFalse(CallerPolicy.decide(true, emptyList(), emptySet()))
+    }
+
+    @Test
+    fun shippedAllowlistDeniesUnknownFleetSignedApps() {
+        val shipped = SignatureCallerVerifier.HUB_PACKAGE_ALLOWLIST
+        assertFalse(CallerPolicy.decide(true, listOf("com.example.fleet.app"), shipped))
     }
 
     @Test

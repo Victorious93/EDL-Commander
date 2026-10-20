@@ -2,6 +2,7 @@ package ai.edlcommander.companion
 
 import android.content.Context
 import ai.edlcommander.companion.BuildConfig
+import ai.edlcommander.companion.audit.AuditRedaction
 import ai.edlcommander.companion.audit.AuditTrail
 import ai.edlcommander.companion.audit.FileAuditStore
 import ai.edlcommander.companion.bridge.ConfigBackup
@@ -38,7 +39,7 @@ class CompanionRuntime private constructor(context: Context) {
         // Off the main thread: the audit lock is held for the whole duration of an identify run.
         val auditWorker = Executors.newSingleThreadExecutor()
         val permissions = AndroidUsbPermissionGate(app, UsbPermissionTracker()) { deviceName, granted ->
-            auditWorker.execute { audit.append("usb.permission", if (granted) "granted" else "denied", "device=$deviceName") }
+            auditWorker.execute { audit.append("usb.permission", if (granted) "granted" else "denied", AuditRedaction.deviceDetail(deviceName)) }
         }
         router = CommandRouter(
             usb = AndroidUsbDeviceSource(app),

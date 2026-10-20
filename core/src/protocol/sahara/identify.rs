@@ -15,7 +15,7 @@ use super::packet::{HelloResp, MAX_RAW_RESPONSE};
 use super::state::{HOST_VERSION, HOST_VERSION_COMPAT};
 use super::SaharaError;
 use crate::diagnostics::{DiagLog, Level};
-use crate::transport::Transport;
+use crate::transport::{Transport, TransportError};
 use std::time::Duration;
 
 #[derive(Debug, Clone)]
@@ -93,6 +93,21 @@ impl<T: Transport> Io<'_, T> {
                     format!("read failed: {e}"),
                 );
             })?;
+        if n > self.buf.len() {
+            // A misbehaving transport must not be able to make us slice out of bounds.
+            self.log.push(
+                Level::Error,
+                "sahara.transport",
+                format!(
+                    "transport reported {n} bytes for a {}-byte buffer",
+                    self.buf.len()
+                ),
+            );
+            return Err(TransportError::Io(
+                "transport reported more bytes than the buffer holds".into(),
+            )
+            .into());
+        }
         Ok(n)
     }
 
@@ -111,7 +126,13 @@ impl<T: Transport> Io<'_, T> {
     }
 
     fn send(&mut self, p: &Packet) -> Result<(), SaharaError> {
-        self.transport.write(&p.encode(), self.opts.timeout)?;
+        let bytes = p.encode();
+        let n = self.transport.write(&bytes, self.opts.timeout)?;
+        if n != bytes.len() {
+            return Err(
+                TransportError::Io(format!("short write: {n} of {} bytes", bytes.len())).into(),
+            );
+        }
         Ok(())
     }
 
@@ -277,4 +298,68 @@ pub fn run_identify<T: Transport>(
         returned_to_image_mode,
         reads: io.reads,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A buggy backend: claims to have read more bytes than the buffer holds, and can short-write.
+    struct Liar {
+        claim: usize,
+        short_write: bool,
+        hello: bool,
+    }
+
+    impl Transport for Liar {
+        fn write(&mut self, data: &[u8], _: Duration) -> Result<usize, TransportError> {
+            Ok(if self.short_write {
+                data.len() - 1
+            } else {
+                data.len()
+            })
+        }
+        fn read(&mut self, buf: &mut [u8], _: Duration) -> Result<usize, TransportError> {
+            if self.hello {
+                let p = Packet::Hello(super::super::packet::Hello {
+                    version: 2,
+                    version_compat: 1,
+                    max_cmd_pkt_len: 1024,
+                    mode: Mode::ImageTxPending,
+                })
+                .encode();
+                buf[..p.len()].copy_from_slice(&p);
+                return Ok(p.len());
+            }
+            Ok(buf.len() + self.claim)
+        }
+    }
+
+    #[test]
+    fn oversized_read_count_is_an_error_not_a_panic() {
+        let mut t = Liar {
+            claim: 1,
+            short_write: false,
+            hello: false,
+        };
+        let err = run_identify(&mut t, &IdentifyOptions::default(), &mut DiagLog::new());
+        assert!(matches!(
+            err,
+            Err(SaharaError::Transport(TransportError::Io(_)))
+        ));
+    }
+
+    #[test]
+    fn short_write_is_an_error() {
+        let mut t = Liar {
+            claim: 0,
+            short_write: true,
+            hello: true,
+        };
+        let err = run_identify(&mut t, &IdentifyOptions::default(), &mut DiagLog::new());
+        assert!(matches!(
+            err,
+            Err(SaharaError::Transport(TransportError::Io(_)))
+        ));
+    }
 }

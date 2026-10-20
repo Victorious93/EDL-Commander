@@ -130,7 +130,7 @@ From `AndroidManifest.xml`:
 
 ## 5. Fleet integration and safety gates
 
-- **Controller bind**: see section 2. Two checks apply: the signature permission at bind time, and `SignatureCallerVerifier` on every call. The hub package allowlist is **empty for now** (a TODO), so any app signed with the fleet key is accepted.
+- **Controller bind**: see section 2. Two checks apply: the signature permission at bind time, and `SignatureCallerVerifier` on every call. The hub package allowlist is **empty for now** (a TODO), and the check fails closed: until the hub package is added, no external controller is accepted, even one signed with the fleet key.
 - **Remote control**: there is **no separate "remote control" on/off switch** in this build. A correctly signed controller can bind at any time. The protection comes from these defaults and gates:
   - `dryRun` defaults to `true`, so an envelope returns only a plan unless the caller sets `dryRun=false`.
   - Write-class commands are refused unconditionally.

@@ -447,4 +447,115 @@ mod tests {
             }
         }
     }
+
+    /// Tiny deterministic xorshift so the property tests need no extra dependency.
+    struct Rng(u64);
+    impl Rng {
+        fn next(&mut self) -> u64 {
+            self.0 ^= self.0 << 13;
+            self.0 ^= self.0 >> 7;
+            self.0 ^= self.0 << 17;
+            self.0
+        }
+    }
+
+    fn known_sizes() -> Vec<(u32, usize)> {
+        samples()
+            .iter()
+            .map(|p| (p.command(), p.encode().len()))
+            .collect()
+    }
+
+    #[test]
+    fn prop_every_truncation_of_valid_packets_is_rejected() {
+        for p in samples() {
+            let full = p.encode();
+            for cut in 0..full.len() {
+                assert!(
+                    Packet::decode(&full[..cut]).is_err(),
+                    "truncated {p:?} to {cut} bytes decoded"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn prop_oversized_and_padded_packets_are_rejected() {
+        for p in samples() {
+            let full = p.encode();
+            for extra in [1usize, 3, 4, 64, 4096, 1 << 16] {
+                // Padding without fixing the header: length mismatch.
+                let mut padded = full.clone();
+                padded.resize(full.len() + extra, 0xAA);
+                assert!(matches!(
+                    Packet::decode(&padded),
+                    Err(PacketError::LengthMismatch { .. })
+                ));
+                // Padding with a consistent header: still the wrong size for the command.
+                let declared = u32::try_from(padded.len()).unwrap();
+                padded[4..8].copy_from_slice(&declared.to_le_bytes());
+                assert!(matches!(
+                    Packet::decode(&padded),
+                    Err(PacketError::BadSize { .. })
+                ));
+            }
+        }
+    }
+
+    #[test]
+    fn prop_bad_declared_lengths_are_rejected() {
+        for p in samples() {
+            let full = p.encode();
+            for declared in [0u32, 1, 7, 8, 47, 49, u32::MAX, u32::MAX - 7, 0x8000_0000] {
+                if declared as usize == full.len() {
+                    continue;
+                }
+                let mut b = full.clone();
+                b[4..8].copy_from_slice(&declared.to_le_bytes());
+                assert!(matches!(
+                    Packet::decode(&b),
+                    Err(PacketError::LengthMismatch { .. })
+                ));
+            }
+        }
+    }
+
+    #[test]
+    fn prop_random_buffers_never_panic_and_accepted_ones_roundtrip() {
+        let sizes = known_sizes();
+        let mut rng = Rng(0x9E37_79B9_7F4A_7C15);
+        for _ in 0..20_000 {
+            let r = rng.next();
+            let len = (r % 96) as usize;
+            let mut b: Vec<u8> = (0..len).map(|_| rng.next() as u8).collect();
+            // Bias half the cases toward plausible headers so decoding gets past the prefix.
+            if len >= HEADER_LEN && r & 1 == 0 {
+                let (cmd, size) = sizes[(r >> 8) as usize % sizes.len()];
+                b[0..4].copy_from_slice(&cmd.to_le_bytes());
+                let declared = if r & 2 == 0 { size } else { len };
+                b[4..8].copy_from_slice(&(declared as u32).to_le_bytes());
+            }
+            if let Ok(p) = Packet::decode(&b) {
+                // Anything accepted must have exactly the canonical size and header.
+                let enc = p.encode();
+                assert_eq!(enc.len(), b.len());
+                assert_eq!(enc[..8], b[..8]);
+                assert_eq!(Packet::decode(&enc).unwrap(), p);
+            }
+        }
+    }
+
+    #[test]
+    fn prop_bit_flips_of_valid_packets_never_panic() {
+        for p in samples() {
+            let full = p.encode();
+            for byte in 0..full.len() {
+                for bit in 0..8 {
+                    let mut b = full.clone();
+                    b[byte] ^= 1 << bit;
+                    let _ = Packet::decode(&b);
+                }
+            }
+        }
+    }
 }

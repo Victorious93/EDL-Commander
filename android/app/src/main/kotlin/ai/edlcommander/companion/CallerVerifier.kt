@@ -24,12 +24,13 @@ object CallerPolicy {
     }
 
     /**
-     * Pure decision: the caller must share our signing certificate, and, when an allowlist is
-     * configured, must also run under one of the allowlisted package names.
+     * Pure decision, fail closed: the caller must share our signing certificate **and** run under
+     * one of the allowlisted package names. An empty allowlist denies every external caller.
+     * (Our own uid is accepted separately by [SignatureCallerVerifier.isAllowed].)
      */
     fun decide(sameSignature: Boolean, callerPackages: List<String>, allowlist: Set<String>): Boolean {
         if (!sameSignature) return false
-        return allowlist.isEmpty() || callerPackages.any { it in allowlist }
+        return callerPackages.any { it in allowlist }
     }
 }
 
@@ -59,8 +60,8 @@ class SignatureCallerVerifier(
     companion object {
         /**
          * TODO(droidcommand): the Droidcommand-AI hub package name is not known to this repo.
-         * Until it is filled in, any app signed with the fleet key is accepted. Prefer pinning
-         * the exact hub package once known.
+         * Until it is filled in, external controllers are **denied** (fail closed): an app signed
+         * with the fleet key is not enough on its own. Add the exact hub package here to enable it.
          */
         val HUB_PACKAGE_ALLOWLIST: Set<String> = emptySet()
     }

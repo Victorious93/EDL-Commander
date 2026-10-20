@@ -4,7 +4,7 @@ use super::packet::Packet;
 use super::state::{SaharaHost, Step};
 use super::SaharaError;
 use crate::diagnostics::{DiagLog, Level};
-use crate::transport::Transport;
+use crate::transport::{Transport, TransportError};
 use std::time::Duration;
 
 #[derive(Debug, Clone)]
@@ -54,7 +54,21 @@ pub fn run_programmer_upload<T: Transport>(
                 format!("read failed: {e}"),
             );
         })?;
-        let pkt = Packet::decode(&buf[..n]).inspect_err(|e| {
+        let Some(rx) = buf.get(..n) else {
+            log.push(
+                Level::Error,
+                "sahara.transport",
+                format!(
+                    "transport reported {n} bytes for a {}-byte buffer",
+                    buf.len()
+                ),
+            );
+            return Err(TransportError::Io(
+                "transport reported more bytes than the buffer holds".into(),
+            )
+            .into());
+        };
+        let pkt = Packet::decode(rx).inspect_err(|e| {
             log.push(Level::Error, "sahara.malformed", e.to_string());
         })?;
         packets += 1;
@@ -86,5 +100,34 @@ pub fn run_programmer_upload<T: Transport>(
                 });
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct Liar;
+    impl Transport for Liar {
+        fn write(&mut self, _: &[u8], _: Duration) -> Result<usize, TransportError> {
+            panic!("must not write after a bad read");
+        }
+        fn read(&mut self, buf: &mut [u8], _: Duration) -> Result<usize, TransportError> {
+            Ok(buf.len() + 1)
+        }
+    }
+
+    #[test]
+    fn oversized_read_count_is_an_error_not_a_panic() {
+        let r = run_programmer_upload(
+            &mut Liar,
+            &[0u8; 16],
+            &SessionOptions::default(),
+            &mut DiagLog::new(),
+        );
+        assert!(matches!(
+            r,
+            Err(SaharaError::Transport(TransportError::Io(_)))
+        ));
     }
 }
