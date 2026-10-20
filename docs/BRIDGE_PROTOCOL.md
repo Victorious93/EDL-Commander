@@ -8,7 +8,7 @@ Nothing here has been exercised against a real controller or real hardware. All 
 
 | Field | Type | Notes |
 |---|---|---|
-| `op` | string | `capabilities.get` \| `remote.command` \| `macro.step` \| `macro.run` \| `node.status.get` (STATUS-TRAY, below). Anything else: `unsupported_op` |
+| `op` | string | `capabilities.get` \| `remote.command` \| `macro.step` \| `macro.run` \| `node.status.get` (STATUS-TRAY, below) \| `config.export` \| `config.import` (UNIFIED_BACKUP, below; always refused remotely). Anything else: `unsupported_op` |
 | `requestId` | string | 1..128 chars, echoed back |
 | `targetNodeRef` | string | Informational echo in this version (max 256 chars) |
 | `actionRef` | string | Dotted action, e.g. `usb.list` (`remote.command`, `macro.step`) |
@@ -95,6 +95,25 @@ Frozen spec: `Victorious93/droidcommand-AI` `docs/specs/STATUS_TRAY.md`. Carried
 - **Remote-control switch:** the spec says remote pulls fail closed with `external_control_disabled` while the switch is OFF, so `node.status.get` is refused while it is off. Only `capabilities.get` answers then.
 - Replay, expiry and pairing checks apply as for every op. As the spec says, the advisory `destructive` flag is ignored for gating on this read.
 - The snapshot encoder refuses (`invalid_parameters`) a `detail` that contains forbidden names (password, token, secret, apiKey, whitelist, signing/private key, …) or is over 200 characters; it does not silently strip.
+
+## `config.export` / `config.import` (fleet UNIFIED_BACKUP)
+
+Frozen spec: `Victorious93/droidcommand-AI` `docs/specs/UNIFIED_BACKUP.md` (bundle envelope `version: 1`).
+
+| Op | kind | remoteAllowed | requiresConfirm |
+|---|---|---|---|
+| `config.export` | action | **false** | false |
+| `config.import` | action | **false** | **true** |
+
+- **Remote:** both are refused with `unauthorized` (as `op` or as `remote.command` `actionRef`, including dry runs) after the usual replay/expiry/switch checks. Nothing is read or written. (The spec's error table lists `capability_off` for "remoteAllowed=false for a remote caller"; this companion returns `unauthorized`, consistent with every other remote-denied action here.)
+- **Local:** the companion UI has a "Settings backup" card: Export, Preview import (dry run), and Apply import, which needs an on-device confirmation dialog. `ConfigBackup` implements the spec.
+- **Payload:** one `UnifiedBackupEntry` for `ai.edlcommander.companion`, `schemaVersion: 1`, holding `{"preferences": {...}}` from an explicit allowlist of preference keys. **Preferences only**: never signing keys, secrets or firehose/programmer/loader paths, and never the remote-control switch. This build has no exportable user preferences yet, so the allowlist is empty and an export carries `preferences: {}`.
+- **Wrapping:** `raw-aes-256-gcm` (AES-256-GCM, 12-byte IV, 128-bit tag, record `v1.<b64url iv>.<b64url ct>`, AAD `packageName|schemaVersion|sourceNodeRef`) when a key is supplied. The in-app export uses `wrapping: "none"` with `clearPayload` (the spec's local-dev format), because Android Keystore wrapping isn't implemented (the spec also leaves it undone).
+- **Import order (spec section 4):** version → duplicate package → exactly one of ciphertext/clearPayload matching `wrapping` → decrypt (AAD mismatch is `internal`) → secret-name scan (refused with `invalid_parameters`, never silently stripped; covers api keys, tokens, passwords, signing/private keys, keystore, cert PEM, code word, whitelist, twilio/authToken/numberPool, cookies, firehose/programmer/loader paths) → plan.
+- **dryRun** (the default in the UI) returns a per-key plan (`add`, `overwrite`, `kept_live`, `unchanged`) plus `stripped` keys and writes nothing. Applying without on-device confirmation is `confirmation_required`.
+- **Conflict policy:** `skip` (default), `overwrite`, `merge-by-id`. For flat preferences, `merge-by-id` behaves like `skip` (live values win; missing keys are added).
+- **Remote control is never imported:** any key containing `remote` or `external_control` is stripped (reason `remote_control_never_imported`). After an applied import the switch is **forced OFF** (spec section 4 step 7), even if it was on.
+- Destructive flash/erase/bootloader ops are unaffected and stay `remoteAllowed: false`.
 
 ## Errors
 

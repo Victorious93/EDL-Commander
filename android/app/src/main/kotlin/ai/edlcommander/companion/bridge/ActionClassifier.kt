@@ -31,6 +31,9 @@ object ActionClassifier {
         // Read-only Sahara command mode (serial, HW ID, OEM PK hash). Still needs a user-granted USB permission.
         // Fleet status tray: built from app state only, never touches USB/Sahara.
         ActionPolicy("node.status.get", ActionKind.READ, remoteAllowed = true, requiresConfirm = false, known = true),
+        // Fleet UNIFIED_BACKUP: local only by default; remote callers are refused.
+        ActionPolicy("config.export", ActionKind.ACTION, remoteAllowed = false, requiresConfirm = false, known = true),
+        ActionPolicy("config.import", ActionKind.ACTION, remoteAllowed = false, requiresConfirm = true, known = true),
         ActionPolicy("sahara.identify", ActionKind.READ, remoteAllowed = true, requiresConfirm = false, known = true),
     ).associateBy { it.name }
 

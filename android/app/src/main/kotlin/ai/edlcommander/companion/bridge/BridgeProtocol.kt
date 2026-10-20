@@ -30,6 +30,10 @@ enum class BridgeOp(val wire: String) {
 
     /** Fleet STATUS-TRAY op (droidcommand-AI docs/specs/STATUS_TRAY.md). Read-only. */
     NODE_STATUS_GET("node.status.get"),
+
+    /** Fleet UNIFIED_BACKUP ops; `remoteAllowed: false`, so always refused over the bridge. */
+    CONFIG_EXPORT("config.export"),
+    CONFIG_IMPORT("config.import"),
     ;
 
     companion object {

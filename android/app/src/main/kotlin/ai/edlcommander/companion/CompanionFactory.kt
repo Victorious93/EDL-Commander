@@ -4,7 +4,9 @@ import android.content.Context
 import ai.edlcommander.companion.BuildConfig
 import ai.edlcommander.companion.audit.AuditTrail
 import ai.edlcommander.companion.audit.FileAuditStore
+import ai.edlcommander.companion.bridge.ConfigBackup
 import ai.edlcommander.companion.bridge.NodeStatusProvider
+import ai.edlcommander.companion.bridge.SharedPreferenceStore
 import ai.edlcommander.companion.bridge.PreferencesRemoteControlSetting
 import ai.edlcommander.companion.bridge.RemoteDispatcher
 import ai.edlcommander.companion.command.CommandRouter
@@ -29,6 +31,7 @@ class CompanionRuntime private constructor(context: Context) {
     /** Local remote-control switch; OFF by default, written only by the in-app UI. */
     val remoteControl = PreferencesRemoteControlSetting(context.applicationContext)
     val remote: RemoteDispatcher
+    val configBackup: ConfigBackup
 
     init {
         val app = context.applicationContext
@@ -51,6 +54,14 @@ class CompanionRuntime private constructor(context: Context) {
             nativeCoreLinked = { nativeCore.isLinked },
         )
         remote = RemoteDispatcher(router, remoteControl, nodeStatus)
+        // Local (in-app) config.export / config.import only; remote callers are refused by BridgeGate.
+        configBackup = ConfigBackup(
+            store = SharedPreferenceStore(app),
+            packageName = BuildConfig.APPLICATION_ID,
+            sourceNodeRef = BuildConfig.APPLICATION_ID,
+            exportableKeys = SharedPreferenceStore.EXPORTABLE_KEYS,
+            forceRemoteControlOff = { remoteControl.setEnabled(false) },
+        )
     }
 
     companion object {

@@ -88,6 +88,7 @@ class BridgeGate(
             BridgeOp.REMOTE_COMMAND -> single(ctx, req.actionRef, params, JSONObject())
             BridgeOp.MACRO_STEP -> macroStep(ctx, params)
             BridgeOp.MACRO_RUN -> macroRun(ctx)
+            BridgeOp.CONFIG_EXPORT, BridgeOp.CONFIG_IMPORT -> single(ctx, op.wire, params, JSONObject())
             // STATUS_TRAY spec section 5: `destructive` is advisory and ignored for gating on this read.
             BridgeOp.NODE_STATUS_GET -> {
                 val r = runAction(id, NodeStatusProvider.OP, params, req.dryRun)

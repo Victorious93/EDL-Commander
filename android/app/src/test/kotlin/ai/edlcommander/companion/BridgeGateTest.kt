@@ -290,7 +290,7 @@ class BridgeGateTest {
         assertEquals("destructive", byName.getValue("flash.*").getString("kind"))
         assertEquals("destructive", byName.getValue("edl.write").getString("kind"))
         assertEquals(
-            listOf("capabilities.get", "remote.command", "macro.step", "macro.run", "node.status.get"),
+            listOf("capabilities.get", "remote.command", "macro.step", "macro.run", "node.status.get", "config.export", "config.import"),
             p.getJSONArray("envelopeOps").let { a -> (0 until a.length()).map { a.getString(it) } },
         )
     }
