@@ -1,5 +1,6 @@
 package ai.edlcommander.companion.command
 
+import ai.edlcommander.companion.audit.AuditRedaction
 import ai.edlcommander.companion.audit.AuditTrail
 import ai.edlcommander.companion.nativecore.NativeCore
 import ai.edlcommander.companion.usb.EdlSessionOpener
@@ -206,7 +207,7 @@ class CommandRouter(
             is Target.Rejected -> return t.result
             is Target.Found -> t.device
         }
-        val logged = audit.append("usb.request_permission", "requested", "device=${device.deviceName}")
+        val logged = audit.append("usb.request_permission", "requested", AuditRedaction.deviceDetail(device.deviceName))
         if (!logged.ok || !logged.persisted) return auditFailure(cmd, logged)
         val payload = JSONObject().put("deviceName", device.deviceName)
         return when (permissions.request(device.deviceName)) {

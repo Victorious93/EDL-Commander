@@ -19,6 +19,7 @@ class FakeNativeCore(
     override val isLinked = true
     override val version = "fake"
     val calls = mutableListOf<String>()
+    val details = mutableListOf<String>()
 
     private fun withAudit(audit: String, entry: String, extra: JSONObject = JSONObject().put("ok", true)): JSONObject =
         extra.put("audit", audit + entry + "\n")
@@ -31,6 +32,7 @@ class FakeNativeCore(
 
     override fun auditAppend(audit: String, timestamp: String, action: String, outcome: String, detail: String): JSONObject {
         calls += "append:$action:$outcome"
+        details += detail
         return withAudit(audit, "$action:$outcome")
     }
 

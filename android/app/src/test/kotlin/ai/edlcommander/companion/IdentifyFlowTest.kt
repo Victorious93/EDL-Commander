@@ -1,5 +1,6 @@
 package ai.edlcommander.companion
 
+import ai.edlcommander.companion.audit.AuditRedaction
 import ai.edlcommander.companion.audit.AuditTrail
 import ai.edlcommander.companion.audit.AuditStore
 import ai.edlcommander.companion.audit.InMemoryAuditStore
@@ -55,6 +56,8 @@ class IdentifyFlowTest {
         assertEquals("requested", res.payload.getString("permission"))
         assertEquals(listOf(edl.deviceName), h.gate.requests)
         assertEquals(listOf("usb.request_permission:requested"), h.auditLines)
+        assertEquals(listOf(AuditRedaction.deviceDetail(edl.deviceName)), h.core.details)
+        assertFalse("raw USB path must not reach the audit log", h.core.details.any { "/dev/bus/usb" in it })
         assertTrue("nothing is opened by a permission request", h.sessions.opened.isEmpty())
     }
 
