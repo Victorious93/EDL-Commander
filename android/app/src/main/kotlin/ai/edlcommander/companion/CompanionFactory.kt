@@ -4,6 +4,11 @@ import android.content.Context
 import ai.edlcommander.companion.BuildConfig
 import ai.edlcommander.companion.audit.AuditTrail
 import ai.edlcommander.companion.audit.FileAuditStore
+import ai.edlcommander.companion.bridge.ConfigBackup
+import ai.edlcommander.companion.bridge.NodeStatusProvider
+import ai.edlcommander.companion.bridge.SharedPreferenceStore
+import ai.edlcommander.companion.bridge.PreferencesRemoteControlSetting
+import ai.edlcommander.companion.bridge.RemoteDispatcher
 import ai.edlcommander.companion.command.CommandRouter
 import ai.edlcommander.companion.nativecore.JniNativeCore
 import ai.edlcommander.companion.nativecore.NativeCore
@@ -23,6 +28,11 @@ class CompanionRuntime private constructor(context: Context) {
     val audit = AuditTrail(nativeCore, FileAuditStore(File(context.applicationContext.filesDir, "audit/edl-audit.jsonl")))
     val router: CommandRouter
 
+    /** Local remote-control switch; OFF by default, written only by the in-app UI. */
+    val remoteControl = PreferencesRemoteControlSetting(context.applicationContext)
+    val remote: RemoteDispatcher
+    val configBackup: ConfigBackup
+
     init {
         val app = context.applicationContext
         // Off the main thread: the audit lock is held for the whole duration of an identify run.
@@ -37,6 +47,20 @@ class CompanionRuntime private constructor(context: Context) {
             audit = audit,
             permissions = permissions,
             sessions = AndroidEdlSessionOpener(app),
+        )
+        val nodeStatus = NodeStatusProvider(
+            nodeId = BuildConfig.APPLICATION_ID,
+            packageName = app.packageName,
+            nativeCoreLinked = { nativeCore.isLinked },
+        )
+        remote = RemoteDispatcher(router, remoteControl, nodeStatus)
+        // Local (in-app) config.export / config.import only; remote callers are refused by BridgeGate.
+        configBackup = ConfigBackup(
+            store = SharedPreferenceStore(app),
+            packageName = BuildConfig.APPLICATION_ID,
+            sourceNodeRef = BuildConfig.APPLICATION_ID,
+            exportableKeys = SharedPreferenceStore.EXPORTABLE_KEYS,
+            forceRemoteControlOff = { remoteControl.setEnabled(false) },
         )
     }
 

@@ -27,6 +27,7 @@ The companion keeps its own UI (`MainActivity`) so it is usable standalone. The 
 | `android/` | Gradle project (AGP 8.7, Kotlin 2.0, Compose, Gradle wrapper 8.10.2) |
 | `android/native/edl-jni/` | Rust crate `edl-jni` (workspace member): JNI glue, callback `Transport` adapter, read-only identify ops |
 | `app/src/main/aidl/.../companion/aidl/` | The wire contract: `IEdlCompanion`, `CommandEnvelope`, `ResultEnvelope` |
+| `.../bridge/` | Bridge envelope v1.1: `BridgeGate` (validation, TTL/skew, nonce cache, classification), `RemoteDispatcher` (remote entry point, remote-control switch), `PreferencesRemoteControlSetting` |
 | `.../command/` | `CommandRouter` (pure Kotlin, JVM-testable), command/result types |
 | `.../companion/` | `EdlCompanionService`, `CompanionBinder`, `CallerVerifier`, `CompanionRuntime` (process-wide wiring shared by UI and service) |
 | `.../usb/` | `QdLoader` (VID/PID), `UsbDeviceSource`, permission gate + tracker, `EndpointSelector`, `UsbBulkPipe`, Android implementations (`AndroidUsb.kt`) |
@@ -41,7 +42,7 @@ Identifiers (renamed from the `io.github.victorious93.edlcommander` placeholders
 Self-contained: no Droidcommand classes or dependency. The hub copies `app/src/main/aidl/ai/edlcommander/companion/aidl/*.aidl` verbatim into its own source set (or consumes them from a shared artifact later). The AIDL interface itself is unchanged apart from the package rename to `ai.edlcommander.companion.aidl`; everything new is additive commands and JSON fields.
 
 - `IEdlCompanion.getProtocolVersion()`: handshake.
-- `IEdlCompanion.execute(CommandEnvelope) -> ResultEnvelope`: single entry point.
+- `IEdlCompanion.execute(CommandEnvelope) -> ResultEnvelope`: single entry point. Remote callers are subject to the remote-control switch (off by default); see [Bridge envelope v1.1](#bridge-envelope-v11-and-the-remote-control-switch).
 - `CommandEnvelope`: `schemaVersion`, `requestId`, `command` (dotted lowercase name), `argsJson` (JSON object, max 64 KiB), `dryRun` (default `true`).
 - `ResultEnvelope`: `status` (`OK`, `DRY_RUN`, `UNSUPPORTED`, `DENIED`, `INVALID`, `ERROR`), stable `code`, human `message`, `payloadJson`, `simulated`, `dryRun`.
 
@@ -73,6 +74,17 @@ In order, stopping at the first failure:
 The payload contains `report` (`saharaVersion`, `serial`, `msmHwId`, `msmId`, `oemId`, `modelId`, `oemPkHash`, `oemPkHashBytes`, `returnedToImageMode`), `device`, `diag`, and `auditPersisted`. Failure codes include `device_timeout`, `device_disconnected`, `transport_error`, `malformed_packet`, `incompatible_version`, `unsupported_mode`, `protocol_error`, `packet_budget_exceeded`.
 
 The serial number and PK hash are device identifiers. They are returned to the (same-signed) caller and shown in the on-device UI but are never written to the audit log. The `msmId`/`oemId`/`modelId` split of the 64-bit hardware ID follows public descriptions and is unverified; none of this establishes compatibility or capability.
+
+## Bridge envelope v1.1 and the remote-control switch
+
+The frozen fleet remote-control envelope (`BRIDGE_PROTOCOL_MAJOR=1`, `MINOR=1`) is carried by appended, flat fields on `CommandEnvelope`/`ResultEnvelope`; set `bridgeProtocolMajor=1` to use it. Enforcement lives in `.../bridge/` (`BridgeGate`, `ActionClassifier`, `NonceCache`, `RemoteDispatcher`), in front of the unchanged `CommandRouter`. Full spec: [BRIDGE_PROTOCOL.md](BRIDGE_PROTOCOL.md).
+
+- **Remote control is OFF by default.** The user enables it with "Allow remote control" in the companion UI (stored in app-private preferences; no AIDL command can change it). While off, every remote call except `capabilities.get` (bridge) or `companion.capabilities` (legacy) returns `external_control_disabled`. The on-device UI is unaffected.
+- Expiry (TTL default 120 s, max 300 s; skew limit 120 s), duplicate-nonce rejection keyed by `(sourceNodeRef, nonce)` for 10 minutes, and `sourceNodeRef` derived from the Binder calling uid.
+- Flash, bootloader, EDL-write, erase, unlock and similar actions are classified `destructive`, `remoteAllowed: false`, and refused with `unauthorized` (also in dry runs), before the router is reached. The advisory `destructive` flag can only raise the classification.
+- `macro.run` with `dryRun=true` only returns a classified plan; it never reaches the router or a device.
+- `node.status.get` (fleet STATUS-TRAY) returns a `NodeStatusSnapshot` with a single `node_health` domain, built from app state only (no USB or Sahara). It is refused with `external_control_disabled` while remote control is off.
+- `config.export` / `config.import` (fleet UNIFIED_BACKUP) are local only (`remoteAllowed: false`, remote calls get `capability_off` per the spec). The in-app "Settings backup" card supports import only: export is disabled until Android Keystore wrapping exists, so no unencrypted backup is written, saved or shared. Import previews by default, applies only after an on-device confirmation, never imports the remote-control switch, and turns remote control OFF after applying.
 
 ## Same-signing and permissions
 
@@ -150,6 +162,7 @@ Tests:
 
 - Run on a real device and an emulator; capture real Sahara traffic and add capture-based tests before trusting any layout.
 - Pin the Droidcommand-AI hub package and align identifiers with fleet naming.
+- Droidcommand-AI must adopt the bridge envelope v1.1 fields (see BRIDGE_PROTOCOL.md); then consider retiring the legacy path.
 - Decide how a hub should be told that a permission dialog was answered (today: poll `usb.list`).
 - Evidence-recording workflow for a successful identify (outside the app).
 - Everything beyond identification (programmer upload, Firehose) stays out until a device has evidence and a verified programmer.
