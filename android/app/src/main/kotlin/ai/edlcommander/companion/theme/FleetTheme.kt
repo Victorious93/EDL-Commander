@@ -90,14 +90,17 @@ sealed interface PinDecision {
 
 object FleetThemePins {
     /**
-     * Pinned SHA-256 digests (lowercase hex, no colons) of VictorLaunch's signing certificate.
+     * Pinned SHA-256 digests of VictorLaunch's signing certificate (compared after [normalize]).
      *
-     * TODO(fleet-theme): FLEET_THEME.md (schemaVersion 1) does not publish VictorLaunch's
-     * signing-cert SHA-256. Add the real release digest here once Don publishes it. Until then
-     * this set is empty and the client FAILS CLOSED to the built-in default theme.
-     * Never invent a value.
+     * This is VictorLaunch's DEBUG signing cert (source: Victorious93/victorlaunch
+     * FleetPins.VICTORLAUNCH_DEBUG in core/.../fleet/FleetManifest.kt and keystore/README.md).
+     * The VictorLaunch RELEASE cert is still to come: for release builds this value MUST be
+     * replaced or extended with the real release digest. Never invent a value.
      */
-    val VICTORLAUNCH_CERT_SHA256: Set<String> = emptySet()
+    const val VICTORLAUNCH_DEBUG_CERT_SHA256 =
+        "B9:9A:AF:E2:C1:41:8B:5D:64:AA:0D:4B:AC:61:FC:F7:A7:BA:81:44:35:E0:EF:89:E8:AA:55:BE:56:4E:4A:69"
+
+    val VICTORLAUNCH_CERT_SHA256: Set<String> = setOf(VICTORLAUNCH_DEBUG_CERT_SHA256)
 
     fun normalize(d: String) = d.replace(":", "").trim().lowercase()
 

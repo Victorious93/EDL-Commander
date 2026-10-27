@@ -122,8 +122,9 @@ Read-only is the default. Writes and erases are denied unless **every** one of t
 ### 3.8 Fleet theme (read-only)
 If VictorLaunch is installed, the companion can follow the fleet colours Don picks there (Settings ->
 Fleet theme) and update live. It only reads the theme and only from a VictorLaunch build whose signing
-certificate is pinned. Until that certificate is published and pinned, the app always shows its built-in
-default colours. Nothing here can affect devices.
+certificate is pinned. Today only VictorLaunch's **debug** certificate is pinned, so a debug VictorLaunch
+build is followed. The release certificate is still to come; until it is pinned, a release VictorLaunch
+build is not trusted and the app shows its built-in default colours. Nothing here can affect devices.
 
 ## 4. Permissions
 

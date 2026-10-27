@@ -66,10 +66,19 @@ class FleetThemeTest {
         assertTrue(FleetThemePins.decide("com.victorious.launch", emptyList(), pins) is PinDecision.Untrusted)
     }
 
-    @Test fun shippedPinsFailClosedUntilCertPublished() {
-        // Spec publishes no VictorLaunch cert, so nothing is pinned and every provider is untrusted.
-        assertTrue(FleetThemePins.VICTORLAUNCH_CERT_SHA256.isEmpty())
+    @Test fun shippedPinsAcceptOnlyVictorLaunchDebugCert() {
+        val expected = "B9:9A:AF:E2:C1:41:8B:5D:64:AA:0D:4B:AC:61:FC:F7:A7:BA:81:44:35:E0:EF:89:E8:AA:55:BE:56:4E:4A:69"
+        assertEquals(setOf(expected), FleetThemePins.VICTORLAUNCH_CERT_SHA256)
+        val pinned = expected.replace(":", "").lowercase()
+        assertEquals(PinDecision.Trusted, FleetThemePins.decide("com.victorious.launch", listOf(pinned)))
+        assertEquals(PinDecision.Trusted, FleetThemePins.decide("com.victorious.launch", listOf(expected)))
+        assertEquals(PinDecision.Trusted, FleetThemePins.decide("com.victorious.launch", listOf("00".repeat(32), pinned)))
         assertTrue(FleetThemePins.decide("com.victorious.launch", listOf("00".repeat(32))) is PinDecision.Untrusted)
+        // EDL Commander's own debug cert must not be accepted as VictorLaunch.
+        val edl = "E5:60:B6:92:BD:E6:51:9E:B7:CB:B5:2C:E4:DC:91:5A:19:E4:41:A0:1A:5D:03:68:82:71:AC:99:78:8A:58:C8"
+        assertTrue(FleetThemePins.decide("com.victorious.launch", listOf(edl)) is PinDecision.Untrusted)
+        assertTrue(FleetThemePins.decide("com.victorious.launch", emptyList()) is PinDecision.Untrusted)
+        assertTrue(FleetThemePins.decide("com.evil.launch", listOf(pinned)) is PinDecision.Untrusted)
     }
 
     @Test fun fallbackToDefault() {

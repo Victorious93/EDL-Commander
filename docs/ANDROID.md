@@ -167,9 +167,10 @@ extras are ignored and the provider is always re-queried. It never writes the pr
 
 Before querying, the provider owner is pinned by package (`com.victorious.launch`) **and** signing-cert
 SHA-256. A missing provider, pin mismatch, `SecurityException`, malformed data or any `schemaVersion`
-other than 1 falls back to the built-in default theme. **Gap:** the spec does not publish VictorLaunch's
-cert digest, so `FleetThemePins.VICTORLAUNCH_CERT_SHA256` is empty (marked TODO) and the client currently
-always fails closed to the default theme. `<queries>` declares the package and authority. Not device-tested.
+other than 1 falls back to the built-in default theme. `FleetThemePins.VICTORLAUNCH_CERT_SHA256` pins VictorLaunch's **debug** cert
+(`B9:9A:AF:E2:C1:41:8B:5D:64:AA:0D:4B:AC:61:FC:F7:A7:BA:81:44:35:E0:EF:89:E8:AA:55:BE:56:4E:4A:69`, from
+victorlaunch's `FleetPins.VICTORLAUNCH_DEBUG`). **Gap:** the VictorLaunch release cert is still to come; for
+release builds the pin must be replaced or extended, otherwise a release VictorLaunch falls back to the default theme. `<queries>` declares the package and authority. Not device-tested.
 
 ## Not done / follow-ups
 
