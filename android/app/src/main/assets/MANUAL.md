@@ -119,6 +119,12 @@ The `sim` command uploads a dummy 16 KiB image to the **simulator only**. It is 
 
 Read-only is the default. Writes and erases are denied unless **every** one of these holds: write mode is enabled for the session, the device profile is at `write_supported`, authentication is known not to be required, the firmware is verified, and the approved plan digest matches the plan. Writing a protected boot or security partition (`xbl`, `abl`, `tz` and others) also needs a profile allowlist entry and a per-run override. Programmer upload needs a listed programmer whose hash is verified. **No write path is wired into the app or the CLI today.** These gates exist in the core for future use.
 
+### 3.8 Fleet theme (read-only)
+If VictorLaunch is installed, the companion can follow the fleet colours Don picks there (Settings ->
+Fleet theme) and update live. It only reads the theme and only from a VictorLaunch build whose signing
+certificate is pinned. Until that certificate is published and pinned, the app always shows its built-in
+default colours. Nothing here can affect devices.
+
 ## 4. Permissions
 
 From `AndroidManifest.xml`:

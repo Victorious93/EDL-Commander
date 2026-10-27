@@ -15,6 +15,12 @@
         android:label="@string/permission_bind_companion_label"
         android:protectionLevel="signature" />
 
+    <!-- Package visibility for the read-only fleet theme provider (VictorLaunch). -->
+    <queries>
+        <package android:name="com.victorious.launch" />
+        <provider android:authorities="com.victorious.launch.theme" />
+    </queries>
+
     <application
         android:allowBackup="false"
         android:label="@string/app_name"
@@ -38,5 +44,14 @@
                 <action android:name="ai.edlcommander.companion.BIND" />
             </intent-filter>
         </service>
+
+        <!-- Refresh trigger only: extras are ignored; the client re-queries the pinned provider. -->
+        <receiver
+            android:name=".theme.FleetThemeChangedReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.victorious.launch.action.FLEET_THEME_CHANGED" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>
