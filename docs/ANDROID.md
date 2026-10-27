@@ -158,6 +158,19 @@ Tests:
 
 `database/devices/oneplus-7t-hd1905.json` is a research-target profile at capability level `unknown` with no evidence, no programmers and unknown authentication requirements. It is the first planned real-device target and the intended subject of the first read-only identify attempt, but nothing has been run, so it stays at `unknown`. A successful identify would, at most, be recorded as hardware evidence for `sahara_identified` through the normal evidence rules, by a person, from a real capture; the app never edits the database. The Snapdragon 855+ read/flash path is a later phase and requires authorized hardware, a verified programmer, and the existing capability ladder. Many devices of this generation require vendor-authorized programmers; this project does not attempt to bypass that.
 
+## Fleet theme client (FLEET_THEME schemaVersion 1)
+The companion **reads** VictorLaunch's fleet palette (`content://com.victorious.launch.theme/current`,
+spec: `Victorious93/victorlaunch` `docs/specs/FLEET_THEME.md`) and applies `palette.*` to the Compose
+theme live (`theme/FleetThemeClient.kt`). It queries on start, registers a `ContentObserver`, and has an
+exported receiver for `com.victorious.launch.action.FLEET_THEME_CHANGED` that is only a refresh trigger:
+extras are ignored and the provider is always re-queried. It never writes the provider.
+
+Before querying, the provider owner is pinned by package (`com.victorious.launch`) **and** signing-cert
+SHA-256. A missing provider, pin mismatch, `SecurityException`, malformed data or any `schemaVersion`
+other than 1 falls back to the built-in default theme. **Gap:** the spec does not publish VictorLaunch's
+cert digest, so `FleetThemePins.VICTORLAUNCH_CERT_SHA256` is empty (marked TODO) and the client currently
+always fails closed to the default theme. `<queries>` declares the package and authority. Not device-tested.
+
 ## Not done / follow-ups
 
 - Run on a real device and an emulator; capture real Sahara traffic and add capture-based tests before trusting any layout.

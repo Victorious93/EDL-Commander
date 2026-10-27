@@ -40,6 +40,8 @@ import ai.edlcommander.companion.bridge.PreferencesRemoteControlSetting
 import ai.edlcommander.companion.command.Status
 import ai.edlcommander.companion.EdlCompanionService
 import ai.edlcommander.companion.help.HelpScreen
+import ai.edlcommander.companion.theme.FleetTheme
+import ai.edlcommander.companion.theme.FleetThemeClient
 import ai.edlcommander.companion.usb.QdLoader
 import java.util.concurrent.Executors
 
@@ -50,8 +52,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        FleetThemeClient.start(this)
         setContent {
-            MaterialTheme {
+            FleetTheme {
                 var showHelp by remember { mutableStateOf(false) }
                 Scaffold { padding ->
                     if (showHelp) {
