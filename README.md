@@ -44,7 +44,7 @@ Open-source, **safety-first** framework for Qualcomm **Emergency Download (EDL)*
 | `core/` device/chipset/manufacturer/programmer schema + validated DB loader | Implemented |
 | `core/` safety policy (read-only default, gated writes, protected partitions) + hash-chained audit log | Implemented |
 | `simulator/` deterministic fake EDL target with fault injection | Implemented |
-| `tools/edl-cli` (`validate-db`, `sim`) | Implemented; **no USB I/O** |
+| `tools/edl-cli` (`validate-db`, `sim`, `sim-identify`, `scrcpy`) | Implemented. Database and simulator commands perform **no USB I/O**. The optional `scrcpy` command talks only to host `adb`/`scrcpy`; it never talks to EDL/9008 devices. |
 | Firehose, GPT parsing, firmware import, backup, flashing | Not started |
 | Ubuntu app, Android app | Not started |
 
@@ -76,14 +76,37 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 cargo run -p edl-cli -- validate-db database
 cargo run -p edl-cli -- sim [none|silent|malformed|disconnect]
+cargo run -p edl-cli -- scrcpy --dry-run
 ```
+
+## Host-side scrcpy (optional)
+
+`edl-cli scrcpy` can launch [scrcpy](https://github.com/Genymobile/scrcpy) on the **host computer** to view and control a device's screen once that device is already back in normal Android / ADB mode during recovery.
+
+This is optional. There is no hard dependency on scrcpy. The Android companion app does not run scrcpy. The command never opens a Sahara or Firehose session, never calls the write gates, and never talks to EDL / Qualcomm 9008 devices.
+
+```sh
+# Print the exact command that would run, without launching scrcpy:
+cargo run -p edl-cli -- scrcpy --dry-run
+
+# Launch scrcpy for a specific device; extra arguments after -- are passed through:
+cargo run -p edl-cli -- scrcpy --serial ABC123 -- --turn-screen-off
+```
+
+- scrcpy is resolved from `PATH`, or from `SCRCPY_BIN` if that environment variable is set.
+- If scrcpy is not installed, the command prints a short message pointing to https://github.com/Genymobile/scrcpy and exits non-zero. It does not panic.
+- The command runs `adb devices` first. It refuses to launch when adb is missing, when no device is listed, or when the device is `unauthorized` or `offline`. The serial is passed to scrcpy as `-s`.
+- `--dry-run` prints the exact command and does not start scrcpy.
+- If `EDL_AUDIT_LOG` is set to a file path, a hash-chained audit record is appended. Device serials are stored with the same `usb#` plus 12-hex SHA-256 tag used elsewhere in the audit log (pseudonymisation, not secrecy). Raw serials are not written to the log.
+
+This path has been tested only with fake `adb` and `scrcpy` binaries in unit tests. Real scrcpy and a real device have not been tested.
 
 ## Project structure
 
 ```text
 core/           edl-core — Sahara, device DB, security, diagnostics
 simulator/      edl-sim — fake EDL target + fault injection
-tools/edl-cli/  CLI (validate-db, sim)
+tools/edl-cli/  CLI (validate-db, sim, sim-identify, scrcpy)
 database/       chipsets, devices, manufacturers, programmers
 docs/           ANDROID, FLASHING, PROTOCOLS, TESTING, UBUNTU
 ARCHITECTURE.md · COMPATIBILITY.md · SECURITY.md · ROADMAP.md · CONTRIBUTING.md
@@ -92,6 +115,11 @@ ARCHITECTURE.md · COMPATIBILITY.md · SECURITY.md · ROADMAP.md · CONTRIBUTING
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). Keep the safety model: no bypass tooling, no claiming hardware support without evidence. Prefer tests against the simulator over speculative USB code.
+
+
+## Credits
+
+scrcpy by Genymobile, Apache-2.0, https://github.com/Genymobile/scrcpy. It is not bundled. See [NOTICE](NOTICE).
 
 ## License
 

@@ -1,0 +1,8 @@
+scrcpy is not bundled with EDL-Commander.
+
+scrcpy by Genymobile, Apache-2.0, https://github.com/Genymobile/scrcpy
+
+The optional `edl-cli scrcpy` command launches a scrcpy executable already
+installed on the host (from PATH, or from the SCRCPY_BIN environment variable)
+so you can view and control a device once it is back in normal Android / ADB
+mode. EDL-Commander does not vendor, redistribute, or ship scrcpy itself.
