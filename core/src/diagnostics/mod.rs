@@ -1,6 +1,7 @@
 //! Structured diagnostics and a tamper-evident audit log.
 
 pub mod audit;
+pub mod redact;
 
 use serde::{Deserialize, Serialize};
 

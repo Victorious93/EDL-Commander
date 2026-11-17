@@ -1,5 +1,12 @@
-//! Developer CLI. Read-only: validates the database and runs the simulator.
-//! It performs no USB I/O and cannot write to any device.
+//! Developer CLI. Validates the database, runs the simulator, and optionally
+//! launches host-side scrcpy once a device is already in normal ADB mode.
+//!
+//! The database and simulator commands perform no USB I/O and cannot write to
+//! any device. The `scrcpy` command talks only to host `adb`/`scrcpy` binaries;
+//! it never opens an EDL (USB 9008) session and never calls the Sahara,
+//! Firehose, or write-gate paths.
+
+mod scrcpy;
 
 use edl_core::device::Database;
 use edl_core::diagnostics::DiagLog;
@@ -82,9 +89,10 @@ fn main() -> ExitCode {
                 }
             }
         }
+        Some("scrcpy") => scrcpy::main_from_args(&args[1..]),
         _ => {
             eprintln!(
-                "usage: edl-cli validate-db [dir] | sim [none|silent|malformed|disconnect] | sim-identify"
+                "usage: edl-cli validate-db [dir] | sim [none|silent|malformed|disconnect] | sim-identify | scrcpy [--serial X] [--dry-run] [-- extra args]"
             );
             ExitCode::from(2)
         }

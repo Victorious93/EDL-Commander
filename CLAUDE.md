@@ -7,13 +7,14 @@ EDL Commander: a safety-first Rust framework for Qualcomm Emergency Download (ED
 - Cargo workspace (`Cargo.toml`, edition 2021, `rust-version = "1.80"`, MIT): members `core`, `simulator`, `tools/edl-cli`.
 - `core/src/`: `protocol/sahara`, `transport.rs` (`Transport`), `usb.rs` (`UsbEnumerator` trait, no backend), `device/` (profile + database loader), `security/` (`policy.rs`, `authorize`), `diagnostics/audit.rs`. Integration test: `core/tests/database.rs`.
 - `simulator/`: fake EDL target with fault injection; test `simulator/tests/sahara_e2e.rs`.
-- `tools/edl-cli`: subcommands `validate-db <dir>` and `sim [none|silent|malformed|disconnect]`.
+- `tools/edl-cli`: subcommands `validate-db <dir>`, `sim [none|silent|malformed|disconnect]`, `sim-identify`, and optional host-side `scrcpy [--serial X] [--dry-run] [-- extra args]`. The scrcpy command talks only to host adb/scrcpy (normal ADB mode), never to EDL/9008, Sahara, Firehose, or the write gates.
 - `database/`: JSON profiles — `chipsets/sdm845.json`, `devices/oneplus-6.json`, `manufacturers/oneplus.json`; `programmers/` is empty.
 - `docs/`: ANDROID, FLASHING, PROTOCOLS, TESTING, UBUNTU notes; plus `COMPATIBILITY.md`, `CONTRIBUTING.md`, `SECURITY.md` at root.
 
 ## Commands
 - Build/test (same as CI): `cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings && cargo test --workspace && cargo run -p edl-cli -- validate-db database`
 - Simulator: `cargo run -p edl-cli -- sim [none|silent|malformed|disconnect]`
+- Optional host scrcpy (does not talk to EDL devices): `cargo run -p edl-cli -- scrcpy --dry-run`
 
 ## CI
 `.github/workflows/ci.yml` ("CI") runs on every push and pull_request: job `rust` (fmt, clippy `-D warnings`, tests, `validate-db`) and job `audit` (`cargo install cargo-audit --locked && cargo audit`). Latest runs on `main` passed (checked 2026-10-15).

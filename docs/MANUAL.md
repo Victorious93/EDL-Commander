@@ -12,7 +12,7 @@ EDL Commander is a safety-first toolkit for Qualcomm Emergency Download (EDL, US
 
 - **edl-core** (Rust): the Sahara protocol (packet codec, state machine, session runner, read-only identify), the security policy (`security::authorize`), a hash-chained audit log, and the device database loader.
 - **edl-sim** (Rust): a simulated EDL device with fault injection, used in tests and by the CLI.
-- **edl-cli** (Rust): a developer command-line tool. It does no USB I/O.
+- **edl-cli** (Rust): a developer command-line tool. The database and simulator commands do no USB I/O. An optional `scrcpy` command can launch host-side scrcpy once a device is already in normal ADB mode; it never talks to EDL / USB 9008 devices.
 - **Android companion app** (`ai.edlcommander.companion`, Kotlin/Compose) with a Rust JNI library (`edl-jni`) that runs edl-core on the phone.
 
 ### Fleet role: BOUND_COMPANION
@@ -105,12 +105,13 @@ To validate the database: `cargo run -p edl-cli -- validate-db database`. It pri
 
 ### 3.6 CLI (`edl-cli`)
 
-The CLI is read-only and does no USB I/O.
+The database and simulator commands are read-only and do no USB I/O. The optional `scrcpy` command is described in section 3.9. It talks only to host `adb` and `scrcpy`, never to EDL / USB 9008 devices.
 
 ```sh
 cargo run -p edl-cli -- validate-db [dir]                          # check the database
 cargo run -p edl-cli -- sim [none|silent|malformed|disconnect]     # SIMULATED programmer-upload session
 cargo run -p edl-cli -- sim-identify                               # SIMULATED read-only identify
+cargo run -p edl-cli -- scrcpy [--serial X] [--dry-run] [-- extra] # optional host-side scrcpy (ADB mode only)
 ```
 
 The `sim` command uploads a dummy 16 KiB image to the **simulator only**. It is not hardware evidence.
@@ -125,6 +126,27 @@ Fleet theme) and update live. It only reads the theme and only from a VictorLaun
 certificate is pinned. Today only VictorLaunch's **debug** certificate is pinned, so a debug VictorLaunch
 build is followed. The release certificate is still to come; until it is pinned, a release VictorLaunch
 build is not trusted and the app shows its built-in default colours. Nothing here can affect devices.
+
+### 3.9 Host-side scrcpy (optional)
+
+`edl-cli scrcpy` can launch scrcpy on the **host computer** to view and control a device's screen once that device is already back in normal Android / ADB mode during recovery. The Android companion app does not run scrcpy. scrcpy is optional; it is not a hard dependency and is not bundled.
+
+This command never opens a Sahara or Firehose session, never calls `security::authorize` or the write gates, and never talks to EDL / Qualcomm 9008 devices.
+
+```sh
+cargo run -p edl-cli -- scrcpy --dry-run
+cargo run -p edl-cli -- scrcpy --serial ABC123 -- --turn-screen-off
+```
+
+- scrcpy is found on `PATH`, or through the `SCRCPY_BIN` environment variable.
+- If scrcpy is missing, the command prints a short message pointing to https://github.com/Genymobile/scrcpy and exits non-zero. It does not panic.
+- The command runs `adb devices` first. It refuses to launch when adb is missing, when no device is listed, or when the device is `unauthorized` or `offline`. The serial is passed through as `-s`.
+- `--dry-run` prints the exact command and does not start scrcpy.
+- If `EDL_AUDIT_LOG` is set, a hash-chained audit record is appended. Serials are stored as `usb#` plus 12 hex characters of SHA-256, the same redaction used for USB paths elsewhere. This is pseudonymisation, not secrecy. Raw serials are not written to the log.
+
+Credit: scrcpy by Genymobile, Apache-2.0, https://github.com/Genymobile/scrcpy. See NOTICE at the repository root.
+
+This path has been tested only with fake `adb` and `scrcpy` binaries in unit tests. Real scrcpy and a real device have not been tested.
 
 ## 4. Permissions
 
@@ -159,7 +181,7 @@ From `AndroidManifest.xml`:
 
 ## 7. Privacy and data handling
 
-- **What is logged**: one hash-chained JSON Lines record per audited decision. Each record has `seq`, `timestamp`, `action`, `outcome`, `detail`, `prev_hash` and `hash`. Examples: authorization decisions, USB permission requests and answers (with the Android USB device path, for example `device=/dev/bus/usb/...`), denied write attempts (command name), and identify results. Identify records store **only whether** the serial and hardware ID were present, plus the PK-hash length. **The serial, hardware ID and PK hash values themselves are not logged.**
+- **What is logged**: one hash-chained JSON Lines record per audited decision. Each record has `seq`, `timestamp`, `action`, `outcome`, `detail`, `prev_hash` and `hash`. Examples: authorization decisions, USB permission requests and answers (with the Android USB device path, for example `device=/dev/bus/usb/...`), denied write attempts (command name), and identify results. Identify records store **only whether** the serial and hardware ID were present, plus the PK-hash length. **The serial, hardware ID and PK hash values themselves are not logged.** On the host, `edl-cli scrcpy` appends a record to the file in `EDL_AUDIT_LOG` when that variable is set; the ADB serial is stored only as the same `usb#` plus 12-hex SHA-256 tag.
 - **Where**: app-private storage, `files/audit/edl-audit.jsonl`. It is not backed up (`allowBackup="false"`) and never leaves the device.
 - **Retention**: when the file is larger than 512 KiB, it is moved to `edl-audit.jsonl.1` before the next write, replacing any older rotation. So at most about two files are kept. A log that fails verification is kept as `edl-audit.jsonl.corrupt-<millis>` and a new chain starts. Corrupt files are not cleaned up automatically. Uninstalling the app deletes everything.
 - **Tamper-evident, not tamper-proof**: anyone with file access could rewrite the whole chain.
