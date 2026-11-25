@@ -1,52 +1,42 @@
-<!-- victorious-fleet-readme-refresh:start -->
-<p align="center">
-  <img src="assets/logo.png" alt="EDL-Commander logo" width="200">
-</p>
+<div align="center">
+
+<img src="assets/logo.png" width="200" alt="EDL-Commander logo"/>
 
 # EDL-Commander
 
-Safety-first Qualcomm EDL (Emergency Download mode) companion for the fleet.
+**Safety-first Qualcomm EDL recovery framework with an Android companion.**
 
-**Package id:** `ai.edlcommander.companion`
+<p>
+  <a href="https://github.com/Victorious93/EDL-Commander/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Victorious93/EDL-Commander/ci.yml?branch=main&style=flat-square&labelColor=0B0F1A&logo=githubactions&logoColor=00E5FF&label=CI" alt="CI"/></a>
+  <a href="https://github.com/Victorious93/EDL-Commander/releases"><img src="https://img.shields.io/github/v/release/Victorious93/EDL-Commander?include_prereleases&style=flat-square&labelColor=0B0F1A&color=00E5FF&label=release" alt="Release"/></a>
+  <img src="https://img.shields.io/badge/license-MIT-FF2BD6?style=flat-square&labelColor=0B0F1A" alt="License"/>
+  <img src="https://img.shields.io/badge/platform-Rust%20%26%20Android-00E5FF?style=flat-square&labelColor=0B0F1A" alt="Platform"/>
+  <a href="https://victorious-framework.pages.dev"><img src="https://img.shields.io/badge/Victorious-Framework-FF2BD6?style=flat-square&labelColor=0B0F1A" alt="Victorious Framework"/></a>
+</p>
 
-> **Package note:** From `android/app/build.gradle.kts`. Native core via Rust/`cargo-ndk`.
+<p><a href="https://github.com/Victorious93/EDL-Commander/releases">Releases</a> · <a href="https://victorious-framework.pages.dev">Victorious Framework</a></p>
 
-**Status:** scaffold / CI *(from [fleet-manifest ROADMAP](https://github.com/Victorious93/fleet-manifest/blob/main/ROADMAP.md))*
+</div>
 
-## Install / build
+---
 
-Android under `android/` plus Rust workspace. Needs Rust Android targets and `cargo-ndk` for native libs; property `edl.skipNative=true` may skip native. Typical: `cd android && ./gradlew :app:assembleDebug` — verify README/CI.
+Open-source, **safety-first** framework for Qualcomm **Emergency Download (EDL)** device recovery, built around a shared Rust engine with an Android companion app and a planned Ubuntu frontend. Android package id: `ai.edlcommander.companion`.
 
-_Steps above are taken from this repo’s build files / existing docs; anything not exercised in this refresh is unlabeled as verified on a device._
-
-## Victorious fleet
-
-- Monorepo: [https://github.com/Victorious93/victorious-fleet](https://github.com/Victorious93/victorious-fleet)
-- Fleet site: [https://victorious-framework.pages.dev](https://victorious-framework.pages.dev)
-
-<!-- victorious-fleet-readme-refresh:end -->
-
-Open-source, **safety-first** framework for Qualcomm **Emergency Download (EDL)** device recovery, built around a shared Rust engine with planned Ubuntu and Android-to-Android (USB OTG) frontends.
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Rust](https://img.shields.io/badge/Rust-1.80%2B-orange?logo=rust)](https://www.rust-lang.org/)
-![Status: Phase 1](https://img.shields.io/badge/status-Phase%201%20foundation-orange)
-
-> **Status: Phase 1 (foundation) only.** No real hardware has been tested. Nothing here can flash a device.
-> There is no USB backend, no Firehose, no GUI, and no Android app yet. See [ROADMAP.md](ROADMAP.md).
+> **Status: early. Phase 1 (foundation) is done in simulation; Phase 3 (Android companion) is in progress.** No real hardware has been tested. Nothing here can flash a device: there is no Firehose and no write path. See [ROADMAP.md](ROADMAP.md).
 
 ## What exists today
 
 | Component | State |
 |---|---|
-| `core/` Sahara packet codec + host state machine + session runner | Implemented; tested against synthetic fixtures and the simulator only |
-| `core/` `Transport` / `UsbEnumerator` traits | Implemented (no real backend yet) |
-| `core/` device/chipset/manufacturer/programmer schema + validated DB loader | Implemented |
+| `core/` Sahara packet codec, host state machine, session runner, read-only command-mode identify | Implemented; tested against synthetic fixtures and the simulator only |
+| `core/` `Transport` / `UsbEnumerator` traits | Implemented (no libusb backend yet) |
+| `core/` device / chipset / manufacturer / programmer schema + validated DB loader | Implemented |
 | `core/` safety policy (read-only default, gated writes, protected partitions) + hash-chained audit log | Implemented |
 | `simulator/` deterministic fake EDL target with fault injection | Implemented |
-| `tools/edl-cli` (`validate-db`, `sim`, `sim-identify`, `scrcpy`) | Implemented. Database and simulator commands perform **no USB I/O**. The optional `scrcpy` command talks only to host `adb`/`scrcpy`; it never talks to EDL/9008 devices. |
-| Firehose, GPT parsing, firmware import, backup, flashing | Not started |
-| Ubuntu app, Android app | Not started |
+| `tools/edl-cli` (`validate-db`, `sim`, `sim-identify`, `scrcpy`) | Implemented. Database and simulator commands perform **no USB I/O**. The optional `scrcpy` command talks only to host `adb`/`scrcpy` and never to EDL/9008 devices |
+| `android/` companion app (Kotlin/Compose, AIDL `IEdlCompanion` service, USB 9008 list/detect, user-initiated USB permission flow, JNI core, audit log, in-app manual, fleet bridge) | Scaffold; builds a debug APK. Written but **unverified on devices**; not run on an emulator or real phone yet |
+| Firehose, GPT parsing, firmware import, backup, flashing | Planned (not started) |
+| Ubuntu app | Planned (not started) |
 
 ## Principles
 
@@ -54,16 +44,14 @@ Open-source, **safety-first** framework for Qualcomm **Emergency Download (EDL)*
 - Support is a per-device capability level backed by recorded evidence. Simulator results are never evidence.
 - No authentication bypasses, secure-boot circumvention, or programmer patching. Devices needing vendor-authorized programmers are reported as such, not attacked.
 
-## Screenshots
+## Install
 
-| CLI `validate-db` | CLI `sim` fault injection | Future Ubuntu GUI | Future Android OTG |
-|---|---|---|---|
-| *TODO* | *TODO* | *Not started* | *Not started* |
+A debug pre-release APK (`v0.1.0-debug`, older than the current source) is on the [Releases page](https://github.com/Victorious93/EDL-Commander/releases). It is a scaffold, not a recovery tool. The Android app requests **no INTERNET permission**; it exposes a bound service guarded by its own `BIND_COMPANION` signature permission for droidcommand-AI.
 
 ## Requirements
 
-- Rust **1.80+** (workspace `rust-version`)
-- Cargo (workspace members: `core`, `simulator`, `tools/edl-cli`)
+- Rust **1.80+** and Cargo (workspace members: `core`, `simulator`, `tools/edl-cli`).
+- For the Android app: JDK 17, the Android SDK, and Rust Android targets with `cargo-ndk` for the native libraries (the `edl.skipNative=true` property can skip native).
 
 ## Build and test
 
@@ -77,7 +65,10 @@ cargo test --workspace
 cargo run -p edl-cli -- validate-db database
 cargo run -p edl-cli -- sim [none|silent|malformed|disconnect]
 cargo run -p edl-cli -- scrcpy --dry-run
+cd android && ./gradlew :app:assembleDebug
 ```
+
+CI runs the Rust formatting, clippy and test steps on every push and pull request.
 
 ## Host-side scrcpy (optional)
 
@@ -104,23 +95,31 @@ This path has been tested only with fake `adb` and `scrcpy` binaries in unit tes
 ## Project structure
 
 ```text
-core/           edl-core — Sahara, device DB, security, diagnostics
-simulator/      edl-sim — fake EDL target + fault injection
+core/           edl-core: Sahara, device DB, security, diagnostics
+simulator/      edl-sim: fake EDL target + fault injection
 tools/edl-cli/  CLI (validate-db, sim, sim-identify, scrcpy)
+android/        Android companion app (Gradle, Kotlin/Compose, AIDL, JNI)
 database/       chipsets, devices, manufacturers, programmers
 docs/           ANDROID, FLASHING, PROTOCOLS, TESTING, UBUNTU
 ARCHITECTURE.md · COMPATIBILITY.md · SECURITY.md · ROADMAP.md · CONTRIBUTING.md
 ```
 
+## Credits
+
+scrcpy by Genymobile, Apache-2.0, https://github.com/Genymobile/scrcpy. It is not bundled. See [NOTICE](NOTICE). Threat boundaries: [SECURITY.md](SECURITY.md), [ARCHITECTURE.md](ARCHITECTURE.md), [COMPATIBILITY.md](COMPATIBILITY.md).
+
+---
+
+## Victorious fleet
+
+EDL-Commander is part of the [Victorious Framework](https://victorious-framework.pages.dev), a family of Android and PC tools by Don Victor. **Every app works standalone; fleet integrations are optional** and never required.
+
+Related: [droidcommand-AI](https://github.com/Victorious93/droidcommand-AI) (fleet controller), [victorious-flash](https://github.com/Victorious93/victorious-flash) (flashing tool), [VictorRecovery](https://github.com/Victorious93/VictorRecovery) (custom recovery). The full roster lives in [victorious-fleet](https://github.com/Victorious93/victorious-fleet), and live status is in [fleet-manifest](https://github.com/Victorious93/fleet-manifest).
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). Keep the safety model: no bypass tooling, no claiming hardware support without evidence. Prefer tests against the simulator over speculative USB code.
 
-
-## Credits
-
-scrcpy by Genymobile, Apache-2.0, https://github.com/Genymobile/scrcpy. It is not bundled. See [NOTICE](NOTICE).
-
 ## License
 
-[MIT](LICENSE). Details and threat boundaries: [SECURITY.md](SECURITY.md), [ARCHITECTURE.md](ARCHITECTURE.md), [COMPATIBILITY.md](COMPATIBILITY.md).
+[MIT](LICENSE). Upstream attribution: see [NOTICE](NOTICE).
